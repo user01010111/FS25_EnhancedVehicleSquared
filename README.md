@@ -15,9 +15,9 @@ vehicle HUD for Farming Simulator 25.
 > [!IMPORTANT]
 > This is an unofficial, community-maintained fork of
 > [Majo76/ZhooL's Enhanced Vehicle](https://github.com/ZhooL/FS25_EnhancedVehicle).
-> It provides compatibility and stability updates while upstream maintenance is
-> paused. No transfer of ownership or official endorsement is implied. Changes
-> remain available for integration into the original project.
+> It independently provides compatibility and stability updates after the
+> original project ended development and was archived. No transfer of ownership
+> or official endorsement is implied.
 
 ![Enhanced Vehicle HUD showing guidance and vehicle information](misc/hud_overview_en.png)
 
@@ -115,10 +115,10 @@ die Fahrtrichtung, eine Feststellbremse, Differenzialsperren, wählbare
 Antriebsmodi, verbesserte Hydrauliksteuerungen und ein erweitertes HUD.
 
 > Dieser inoffizielle, von der Community gepflegte Fork stellt
-> Kompatibilitäts- und Stabilitätskorrekturen bereit, solange die Pflege des
-> Originalprojekts pausiert. Eine Übertragung der Eigentümerschaft oder
-> offizielle Unterstützung durch den ursprünglichen Autor wird nicht
-> beansprucht.
+> eigenständig Kompatibilitäts- und Stabilitätskorrekturen bereit, nachdem die
+> Weiterentwicklung des Originalprojekts eingestellt und dessen Repository
+> archiviert wurde. Eine Übertragung der Eigentümerschaft oder offizielle
+> Unterstützung durch den ursprünglichen Autor wird nicht beansprucht.
 
 ### Installation
 
