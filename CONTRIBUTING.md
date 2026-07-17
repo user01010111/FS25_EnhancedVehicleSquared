@@ -1,7 +1,9 @@
 # Contributing to Enhanced Vehicle Squared
 
-Enhanced Vehicle Squared is maintained in this repository. Do not send changes
-to the archived original project on this project's behalf.
+Enhanced Vehicle Squared is maintained and released by `user01010111` with
+Enhanced Vehicle Squared contributors. Submit project changes only to this
+repository; do not send changes to the archived original project on this
+project's behalf.
 
 ## Language
 

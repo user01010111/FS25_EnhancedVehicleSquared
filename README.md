@@ -9,6 +9,10 @@ vehicle-control and guidance mod for Farming Simulator 25. It provides track
 guidance, drivetrain controls, grouped implement actions, and a more useful
 vehicle HUD.
 
+`user01010111` maintains and releases Enhanced Vehicle Squared with its
+contributors. This maintenance role does not claim ownership of the original
+work or of changes authored by other contributors; see [Attribution](ATTRIBUTION.md).
+
 [Releases](https://github.com/user01010111/FS25_EnhancedVehicleSquared/releases) ·
 [Report an issue](https://github.com/user01010111/FS25_EnhancedVehicleSquared/issues) ·
 [Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) ·

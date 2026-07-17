@@ -2,14 +2,15 @@
 
 ## Project status
 
-Enhanced Vehicle Squared is the active, fork-only continuation of the archived
-Enhanced Vehicle project. The original project was explicitly discontinued and
-made read-only on 17 July 2026 after about 275 days without a substantive code
-release. Its owner closed the two outstanding pull requests unreviewed and
-unmerged, closed the three outstanding issues as not planned, and supplied no
-maintainer response with those closures. No public successor maintainer or
-transition plan was identified. We therefore treat upstream as abandoned for
-maintenance purposes.
+Enhanced Vehicle Squared is the active, independent continuation of the
+archived Enhanced Vehicle project, maintained and released by `user01010111`
+with Enhanced Vehicle Squared contributors. The original project was explicitly
+discontinued and made read-only on 17 July 2026 after about 275 days without a
+substantive code release. Its owner closed the two outstanding pull requests
+unreviewed and unmerged, closed the three outstanding issues as not planned,
+and supplied no maintainer response with those closures. No public successor
+maintainer or transition plan was identified. We therefore treat upstream as
+abandoned for maintenance purposes.
 
 All prepared upstream contribution branches are retired. We will not publish,
 rebase, or reconcile them against the archived repository. Their useful changes

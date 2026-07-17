@@ -4,6 +4,13 @@ Enhanced Vehicle Squared is an independently maintained adapted work. It is not
 the original project, and its maintainers are not endorsed by or affiliated
 with the original creator.
 
+## Current maintenance
+
+`user01010111` maintains and releases Enhanced Vehicle Squared with Enhanced
+Vehicle Squared contributors. This current-maintenance role does not transfer
+or claim ownership of the original work, its copyright, or changes authored by
+other contributors.
+
 ## Original work
 
 Original work copyright © 2018–2025 **Majo76 (formerly ZhooL)**.
