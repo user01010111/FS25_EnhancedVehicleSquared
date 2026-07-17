@@ -275,9 +275,12 @@ function FS25_EnhancedVehicle:loadMap()
   -- first set our current and default config to default values
   FS25_EnhancedVehicle:resetConfig()
   -- then read values from disk and "overwrite" current config
-  lC:readConfig()
-  -- then write current config (which is now a merge between default values and from disk)
-  lC:writeConfig()
+  local _, _, shouldWriteConfig = lC:readConfig()
+  -- Write the merged defaults/current values or complete a verified legacy
+  -- migration.  Unreadable files are retained for manual recovery.
+  if shouldWriteConfig then
+    lC:writeConfig()
+  end
   -- and finally activate current config
   FS25_EnhancedVehicle:activateConfig()
 end

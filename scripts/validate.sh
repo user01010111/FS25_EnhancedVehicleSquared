@@ -35,6 +35,8 @@ fi
 "$lua_runtime" tests/check_runtime.lua
 "$lua_compiler" -p tests/check_client_runtime.lua
 "$lua_runtime" tests/check_client_runtime.lua
+"$lua_compiler" -p tests/check_config.lua
+"$lua_runtime" tests/check_config.lua
 
 python3 tests/check_release.py
 python3 tests/check_contracts.py

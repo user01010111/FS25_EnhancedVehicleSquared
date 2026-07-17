@@ -104,11 +104,33 @@ def main() -> int:
     for function_name in (
         "createPlaneShapeFrom2DContour",
         "createTransformGroup",
+        "createXMLFile",
+        "delete",
         "getMaterial",
+        "hasXMLProperty",
+        "loadXMLFile",
+        "saveXMLFile",
         "setMaterial",
     ):
         if f'<function name="{function_name}"' not in binding_text:
             print(f"engine contract: {function_name} binding is unavailable", file=sys.stderr)
+            return 1
+    for contract_text in (
+        'desc="xmlId (0 if failed to load)"',
+        '<param name="success" type="boolean" desc="success"/>',
+    ):
+        if contract_text not in binding_text:
+            print(f"engine contract: XML persistence contract is missing {contract_text!r}", file=sys.stderr)
+            return 1
+
+    game_executable = source.parents[2] / "x64" / "FarmingSimulator2025Game.exe"
+    if not game_executable.is_file():
+        print("engine contract: FarmingSimulator2025Game.exe is unavailable", file=sys.stderr)
+        return 1
+    executable_symbols = game_executable.read_bytes()
+    for function_name in ("createFolder", "deleteFile", "fileExists"):
+        if function_name.encode("ascii") not in executable_symbols:
+            print(f"engine contract: {function_name} engine symbol is unavailable", file=sys.stderr)
             return 1
 
     print(f"Validated installed FS25 engine contracts in {source}")
