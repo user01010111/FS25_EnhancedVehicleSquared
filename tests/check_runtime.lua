@@ -356,6 +356,70 @@ FS25_EnhancedVehicle.foldHydraulicGroup({
   { spec_foldable = { hasFoldingParts = true, foldingParts = { {} } } }
 }, "partial")
 
+-- Headland scanning resolves the FS25 grass mapping and deliberately keeps
+-- cut grass distinct from uncut grass.
+FieldGroundType = {
+  GRASS = "grass",
+  GRASS_CUT = "grassCut",
+  getValueByType = function(groundType)
+    if groundType == "grass" then return 14 end
+    if groundType == "grassCut" then return 15 end
+  end
+}
+FieldDensityMap = { GROUND_TYPE = "groundType" }
+function bitShiftRight(value, channels) return math.floor(value / 2^channels) end
+function bitAND(value, mask) return value % (mask + 1) end
+function getTerrainHeightAtWorldPos() return 0 end
+
+g_currentMission.grassValue = nil
+g_currentMission.terrainRootNode = {}
+g_currentMission.fieldGroundSystem = {
+  getDensityMapData = function() return 1, 4, 4 end
+}
+
+local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
+local cutGrassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS_CUT)
+assertEqual(grassValue, 14, "nontrivial grass mapping")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(0, grassValue), false, "zero density ground")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(grassValue, grassValue), false, "grass ground")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(cutGrassValue, grassValue), true, "cut grass ground")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(7, grassValue), true, "ordinary field ground")
+
+local headlandVehicle = {
+  vData = {
+    px = 0,
+    pz = 0,
+    dirX = 1,
+    dirZ = 0,
+    track = { headlandDistance = 1, workWidth = 6 }
+  }
+}
+local sampledGroundType = grassValue
+function getDensityAtWorldPos()
+  return sampledGroundType * 2^4
+end
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), false, "headland info grass boundary")
+sampledGroundType = cutGrassValue
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), true, "headland info cut grass")
+sampledGroundType = 7
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), true, "headland info ordinary field")
+sampledGroundType = 0
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), false, "headland info zero density")
+
+function getDensityAtWorldPos(_, x)
+  local densityType = x >= 2.5 and grassValue or cutGrassValue
+  return densityType * 2^4
+end
+FS25_EnhancedVehicle:getHeadlandDistance(headlandVehicle)
+assertNear(headlandVehicle.vData.track.eofDistance, 1.5, 0.000001,
+  "headland distance grass termination")
+
+function getDensityAtWorldPos()
+  return cutGrassValue * 2^4
+end
+FS25_EnhancedVehicle:getHeadlandDistance(headlandVehicle)
+assertEqual(headlandVehicle.vData.track.eofDistance, -1, "headland distance cut grass policy")
+
 -- Parking brake changes are specialization-scoped and flow through superFunc.
 local physicsVehicle = {
   vData = { is = { [5] = false, [13] = true } },

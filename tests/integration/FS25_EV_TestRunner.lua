@@ -416,6 +416,59 @@ case("group_fold_contract", function()
   return true
 end)
 
+case("headland_ground_type_contract", function()
+  if g_dedicatedServerInfo ~= nil then return skip("dedicated server") end
+  requireValue(FieldGroundType ~= nil and type(FieldGroundType.getValueByType) == "function",
+    "FieldGroundType contract is unavailable")
+  local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
+  local cutGrassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS_CUT)
+  requireValue(type(grassValue) == "number" and grassValue ~= 0,
+    "FS25 grass mapping is invalid")
+  requireValue(type(cutGrassValue) == "number" and cutGrassValue ~= grassValue,
+    "FS25 cut-grass mapping is not distinct")
+
+  local originalTerrainHeight = getTerrainHeightAtWorldPos
+  local originalDensity = getDensityAtWorldPos
+  local fieldGroundSystem = g_currentMission.fieldGroundSystem
+  local originalMapData = fieldGroundSystem.getDensityMapData
+  local sampledGroundType = grassValue
+
+  local ok, reason = xpcall(function()
+    getTerrainHeightAtWorldPos = function() return 0 end
+    getDensityAtWorldPos = function(_, x)
+      local densityType = sampledGroundType
+      if type(sampledGroundType) == "function" then densityType = sampledGroundType(x) end
+      return densityType
+    end
+    fieldGroundSystem.getDensityMapData = function() return 1, 0, 8 end
+
+    local vehicle = {
+      vData = {
+        px = 0,
+        pz = 0,
+        dirX = 1,
+        dirZ = 0,
+        track = { headlandDistance = 1, workWidth = 6 }
+      }
+    }
+    requireValue(FS25_EnhancedVehicle:getHeadlandInfo(vehicle) == false,
+      "production headland info classified grass as field")
+    sampledGroundType = cutGrassValue
+    requireValue(FS25_EnhancedVehicle:getHeadlandInfo(vehicle) == true,
+      "production headland info classified cut grass as grass")
+    sampledGroundType = function(x) return x >= 2.5 and grassValue or cutGrassValue end
+    FS25_EnhancedVehicle:getHeadlandDistance(vehicle)
+    near(vehicle.vData.track.eofDistance, 1.5, 0.001,
+      "production headland distance grass boundary")
+  end, function(message) return tostring(message) end)
+
+  getTerrainHeightAtWorldPos = originalTerrainHeight
+  getDensityAtWorldPos = originalDensity
+  fieldGroundSystem.getDensityMapData = originalMapData
+  if not ok then error(reason) end
+  return true
+end)
+
 local function graphicsCase(label, kind, value)
   case("aa_" .. label, function(self, dt, state)
     if g_dedicatedServerInfo ~= nil then return skip("dedicated server") end

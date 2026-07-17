@@ -2447,6 +2447,12 @@ end
 
 -- #############################################################################
 
+function FS25_EnhancedVehicle.isHeadlandFieldGround(densityType, grassValue)
+  return densityType ~= 0 and densityType ~= grassValue
+end
+
+-- #############################################################################
+
 function FS25_EnhancedVehicle:getHeadlandInfo(self)
   local distance = self.vData.track.headlandDistance
   if distance == 9999 and self.vData.track.workWidth ~= nil then
@@ -2462,7 +2468,8 @@ function FS25_EnhancedVehicle:getHeadlandInfo(self)
   local groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels = g_currentMission.fieldGroundSystem:getDensityMapData(FieldDensityMap.GROUND_TYPE)
   local _density = getDensityAtWorldPos(groundTypeMapId, x, y, z)
   local _densityType = bitAND(bitShiftRight(_density, groundTypeFirstChannel), 2^groundTypeNumChannels - 1)
-  isOnField = isOnField and (_densityType ~= g_currentMission.grassValue and _densityType ~= 0)
+  local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
+  isOnField = isOnField and FS25_EnhancedVehicle.isHeadlandFieldGround(_densityType, grassValue)
 
   -- for debugging
 --  self.vData.hlx = x
@@ -2485,7 +2492,8 @@ function FS25_EnhancedVehicle:getHeadlandDistance(self)
   local _z = z
 
   local y
-  local groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels
+  local groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels = g_currentMission.fieldGroundSystem:getDensityMapData(FieldDensityMap.GROUND_TYPE)
+  local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
   local _density, _densityType
 
   local isOnField = true
@@ -2494,10 +2502,9 @@ function FS25_EnhancedVehicle:getHeadlandDistance(self)
 
   while(_dist < 100) do
     y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 1, z)
-    groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels = g_currentMission.fieldGroundSystem:getDensityMapData(FieldDensityMap.GROUND_TYPE)
     _density = getDensityAtWorldPos(groundTypeMapId, x, y, z)
     _densityType = bitAND(bitShiftRight(_density, groundTypeFirstChannel), 2^groundTypeNumChannels - 1)
-    isOnField = isOnField and (_densityType ~= g_currentMission.grassValue and _densityType ~= 0)
+    isOnField = isOnField and FS25_EnhancedVehicle.isHeadlandFieldGround(_densityType, grassValue)
 
     if not isOnField then
       self.vData.track.eofDistance = MathUtil.vector2Length(_x - x, _z - z)
