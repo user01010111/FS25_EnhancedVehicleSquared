@@ -79,7 +79,7 @@ class ReleaseArchiveTests(unittest.TestCase):
             "nested/FS25_EV_TestRunner.lua",
             "tests/case.lua",
             "scripts/package.py",
-            "release-notes/v2.0.0.0.md",
+            "release-notes/v2.0.0.1.md",
             ".codex-finalisation/report.md",
             "build/recovery.bin",
             "screenshots/client.png",
@@ -103,6 +103,9 @@ class ReleaseArchiveTests(unittest.TestCase):
             "required legal files",
         ):
             release_check.validate_release_isolation(["modDesc.xml"])
+
+    def test_current_source_hygiene(self) -> None:
+        release_check.validate_source_hygiene(release_check.manifest_entries())
 
 
 if __name__ == "__main__":

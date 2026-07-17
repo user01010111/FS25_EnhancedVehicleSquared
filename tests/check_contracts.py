@@ -98,7 +98,7 @@ def main() -> int:
         save_keys = set(
             re.findall(
                 r"\{\s*\d+\s*,\s*'([^']+)'\s*\}",
-                source[source.index("-- load vehicle status from savegame") : source.index("-- update vehicle parameters")],
+                source,
             )
         )
         if save_keys != EXPECTED_SAVE_KEYS:

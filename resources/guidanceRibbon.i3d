@@ -2,7 +2,7 @@
 
 <i3D name="guidanceRibbon" version="1.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://i3d.giants.ch/schema/i3d-1.6.xsd">
   <Asset>
-    <Export program="Enhanced Vehicle Squared" version="2.0.0.0"/>
+    <Export program="Enhanced Vehicle Squared" version="2.0.0.1"/>
   </Asset>
 
   <Files>

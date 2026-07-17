@@ -16,6 +16,14 @@ All prepared upstream contribution branches are retired. We will not publish,
 rebase, or reconcile them against the archived repository. Their useful changes
 live in the Squared history and test suite.
 
+## Release 2.0.0.1
+
+This ownership and source-hygiene release removes unreferenced legacy working
+assets, trims obsolete source commentary, identifies `user01010111` as the
+current maintainer, and enforces the English-only and attribution boundaries in
+automated validation. Runtime behavior and the retained compatibility ABI are
+unchanged from 2.0.0.0.
+
 ## Release 2.0.0.0
 
 The first Squared release establishes an independently controlled baseline:

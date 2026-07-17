@@ -250,7 +250,7 @@ case("mission_load", function()
   requireValue(g_EnhancedVehicle ~= nil, "g_EnhancedVehicle was not constructed")
   requireValue(g_currentMission.EnhancedVehicle == g_EnhancedVehicle,
     "mission EnhancedVehicle reference is inconsistent")
-  requireValue(g_EnhancedVehicle.version == "2.0.0.0", "unexpected mod version")
+  requireValue(g_EnhancedVehicle.version == "2.0.0.1", "unexpected mod version")
   requireValue(runner.statusStream ~= nil, "structured status stream is unavailable")
   return true
 end)
@@ -870,7 +870,7 @@ function runner:onDedicatedMissionLoaded(mission)
     requireValue(g_EnhancedVehicle ~= nil, "g_EnhancedVehicle was not constructed")
     requireValue(mission.EnhancedVehicle == g_EnhancedVehicle,
       "mission EnhancedVehicle reference is inconsistent")
-    requireValue(g_EnhancedVehicle.version == "2.0.0.0", "unexpected mod version")
+    requireValue(g_EnhancedVehicle.version == "2.0.0.1", "unexpected mod version")
     requireValue(self.statusStream ~= nil, "structured status stream is unavailable")
   end)
 

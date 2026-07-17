@@ -64,26 +64,20 @@ identity, configuration, and third-party integrations.
 
 ## Compatibility
 
-Enhanced Vehicle Squared 2.0.0.0 requires Farming Simulator 25 version
+Enhanced Vehicle Squared 2.0.0.1 requires Farming Simulator 25 version
 1.20.0.0 or newer. The project and all distributed user-facing text are English
 only. Console releases are not supported.
 
-## What changed in 2.0.0.0
+## What changed in 2.0.0.1
 
-- Established the independent Enhanced Vehicle Squared identity and release
-  line
-- Added transactional licensed-test cleanup and protected mod-settings handling
-- Added strict structured test markers and exact source/archive comparison
-- Corrected guidance offset wrapping at track boundaries
-- Corrected grouped fold controls using Farming Simulator fold contracts
-- Corrected grass and headland ground-type classification
-- Made current-versus-legacy configuration precedence deterministic
-- Added verified configuration migration with malformed-file preservation
-- Classified dedicated processes early and prevented dedicated configuration
-  file access
-- Isolated client-only HUD, GUI, sound, and renderer resources from dedicated
-  servers
-- Reduced distributed language content to plain English
+- Removed unreferenced legacy working assets and source-history baggage.
+- Replaced redundant commentary with concise English documentation of runtime
+  contracts, compatibility interfaces, migration, authority, and engine quirks.
+- Identified `user01010111` as the current maintainer without changing original
+  copyright or contributor ownership.
+- Added automated checks for English-only translations, attribution boundaries,
+  removed assets, source hygiene, and legal release contents.
+- Kept runtime behavior and every documented compatibility interface unchanged.
 
 ## Features
 
@@ -137,7 +131,7 @@ All controls can be changed through the in-game input settings.
 - Fuel-consumption and engine-temperature values may be inaccurate for
   non-host players because the GIANTS Engine does not synchronize every
   required value.
-- Automated networking checks simulate protocol behavior. The 2.0.0.0 release
+- Automated networking checks simulate protocol behavior. The 2.0.0.1 release
   candidate has licensed local client and dedicated-server coverage, but not a
   genuine multi-machine multiplayer session.
 - Subjective visuals still require human review even where screenshot checks
