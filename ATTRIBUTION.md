@@ -34,12 +34,16 @@ retained only where Farming Simulator compatibility requires it.
 
 ## Why maintenance moved here
 
-The original repository was archived and made read-only on **17 July 2026**.
-The owner added a development-discontinued notice at commit
-`379a6edc5246eeef8f4849b1937799e795d34904`. Before that notice, the last
-substantive code release was commit
-`a173833c3295915b5c0efa519e388b6753b04a03` on **15 October 2025**, about
-275 days earlier.
+The original project was closed on **17 July 2026**. Its owner added an
+explicit [development-discontinued notice](https://github.com/ZhooL/FS25_EnhancedVehicle/commit/379a6edc5246eeef8f4849b1937799e795d34904)
+and archived the repository as read-only. The notice says the project had come
+to an end because the owner no longer had the interest or motivation to
+maintain it for the game. Before that notice, the last substantive code release
+was commit `a173833c3295915b5c0efa519e388b6753b04a03` on **15 October 2025**,
+about 275 days earlier. The owner had already stated publicly on
+[30 October 2025](https://github.com/ZhooL/FS25_EnhancedVehicle/issues/75#issuecomment-3469391343)
+that development had stopped and there would be no new feature versions. The
+public repository record identifies no successor maintainer or transition plan.
 
 At archival, the remaining contributions and reports were closed without a
 planned upstream continuation:
@@ -53,8 +57,14 @@ planned upstream continuation:
   [#83](https://github.com/ZhooL/FS25_EnhancedVehicle/issues/83) were closed as
   not planned on 17 July 2026.
 
-Those observed facts are why this project treats the original as abandoned for
-maintenance purposes and has cancelled its upstream-contribution plans.
+The owner performed all five closures. Neither pull request had received a
+maintainer review or comment, and no maintainer response accompanied any of
+the closures. This included tested contribution work and issue follow-ups that
+had been submitted shortly before the shutdown. These observed facts—the
+prolonged release inactivity, explicit cessation, lack of follow-up or a
+transition plan, unplanned closures, and read-only archival—are why this project
+treats the original as abandoned for maintenance purposes and has cancelled its
+upstream-contribution plans.
 
 ## Historical contributors
 

@@ -18,18 +18,25 @@ vehicle HUD.
 
 ## Why Squared exists
 
-The original project was discontinued, archived, and made read-only by its
-owner on 17 July 2026. Its last substantive code release was on 15 October
-2025, about 275 days earlier. On the day of archival, the remaining
-pull requests were closed without merge and the remaining issues were closed
-as not planned. The repository also received an explicit development-stopped
-notice.
+The original project was closed on 17 July 2026: its owner added an explicit
+development-stopped notice and archived the repository as read-only. This came
+about 275 days after its last substantive code release on 15 October 2025. On
+30 October 2025, the owner had already said publicly that development had
+stopped and there would be no new feature versions; no public successor or
+transition plan followed. On the archival day, the owner closed both
+outstanding pull requests without merge and closed all three outstanding issues
+as not planned. Neither pull request had received a maintainer review or
+comment, and no maintainer response accompanied any of those closures. The
+final discontinuation notice states that the owner no longer had the interest
+or motivation to maintain the project for the game.
 
-Taken together, those actions left users without an upstream maintenance path.
-Enhanced Vehicle Squared therefore treats the original project as abandoned
-for maintenance purposes. We have cancelled all upstream-contribution plans
-and will develop, review, test, and release changes from this repository.
-The detailed lineage and evidence links are recorded in [ATTRIBUTION.md](ATTRIBUTION.md).
+Taken together, the prolonged release inactivity, explicit cessation,
+unanswered work, lack of a transition plan, unplanned closures, and read-only
+archival left users without an upstream maintenance path. Enhanced Vehicle
+Squared therefore treats the original project as abandoned for maintenance
+purposes. We have cancelled all upstream-contribution plans and will develop,
+review, test, and release changes from this repository. The detailed chronology
+and evidence links are recorded in [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## Installation
 
