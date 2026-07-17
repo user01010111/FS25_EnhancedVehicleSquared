@@ -1,10 +1,10 @@
+-- Enhanced Vehicle Squared legacy-compatible UI class
 --
--- Project: Enhanced Vehicle Squared (legacy-compatible UI class)
+-- Maintained by user01010111 with Enhanced Vehicle Squared contributors.
+-- See LICENSE and ATTRIBUTION.md.
 --
--- Maintained by Enhanced Vehicle Squared contributors.
--- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
--- @Date: 17.07.2026
--- @Version: 2.0.0.0
+
+
 
 local myName = "EnhancedVehicleSquared_UI"
 
@@ -14,7 +14,7 @@ local FS25_EnhancedVehicle_UI_mt = Class(FS25_EnhancedVehicle_UI, ScreenElement)
 local EV_elements_global = { 'snap', 'diff', 'hydraulic', 'parkingBrake', 'odoMeter' }
 local EV_elements_HUD = { 'fuel', 'dmg', 'misc', 'rpm', 'temp', 'diff', 'track', 'park', 'odo' }
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI.new(target, custom_mt)
   if debug > 1 then print("-> " .. myName .. ": new ") end
@@ -27,7 +27,7 @@ function FS25_EnhancedVehicle_UI.new(target, custom_mt)
   return self
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:delete()
   if debug > 1 then print("-> " .. myName .. ": delete ") end
@@ -36,7 +36,7 @@ function FS25_EnhancedVehicle_UI:delete()
   FS25_EnhancedVehicle_UI:superClass().delete(self)
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:setVehicle(vehicle)
   if debug > 1 then print("-> " .. myName .. ": setVehicle ") end
@@ -44,7 +44,7 @@ function FS25_EnhancedVehicle_UI:setVehicle(vehicle)
   self.vehicle = vehicle
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:onOpen()
   if debug > 1 then print("-> " .. myName .. ": onOpen ") end
@@ -53,20 +53,20 @@ function FS25_EnhancedVehicle_UI:onOpen()
 
   local modName = "FS25_EnhancedVehicle"
 
-  -- title
+
   self.guiTitle:setText("Enhanced Vehicle Squared " .. g_EnhancedVehicle.version)
 
-  -- reset & reload config buttons
+
   self.resetConfigButton:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_resetConfigButton"))
   self.reloadConfigButton:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_reloadConfigButton"))
 
-  -- section headers
+
   self.sectionGlobalFunctions:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_sectionGlobalFunctions"))
   self.sectionHUD:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_sectionHUD"))
   self.sectionSnapSettings:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_sectionSnapSettings"))
   self.sectionHeadlandSettings:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_sectionHeadlandSettings").." "..self.vehicle:getFullName())
 
-  -- global elements
+
   for _, v in pairs(EV_elements_global) do
     local v1 = v.."Title"
     local v2 = v.."TT"
@@ -79,16 +79,16 @@ function FS25_EnhancedVehicle_UI:onOpen()
     })
   end
 
-  -- snap to angle
+
   self.snapSettingsAngleTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_snapSettingsAngleTitle"))
   self.snapSettingsAngleTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_snapSettingsAngleTT"))
 
-  -- visible tracks
+
   self.visibleTracksTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_visibleTracksTitle"))
   self.visibleTracksTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_visibleTracksTT"))
   self.visibleTracksSetting:setTexts({ "1", "3", "5", "7", "9" })
 
-  -- show lines
+
   self.showLinesTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_showLinesTitle"))
   self.showLinesTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_showLinesTT"))
   self.showLinesSetting:setTexts({
@@ -98,7 +98,7 @@ function FS25_EnhancedVehicle_UI:onOpen()
     g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_showLinesOption4")
   })
 
-  -- hide lines
+
   self.hideLinesTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_hideLinesTitle"))
   self.hideLinesTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_hideLinesTT"))
   self.hideLinesSetting:setTexts({
@@ -106,12 +106,12 @@ function FS25_EnhancedVehicle_UI:onOpen()
     g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_off")
   })
 
-  -- hide lines after
+
   self.hideLinesAfterTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_hideLinesAfterTitle"))
   self.hideLinesAfterTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_hideLinesAfterTT"))
   self.hideLinesAfterSetting:setTexts({ "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" })
 
-  -- headland mode
+
   self.headlandModeTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandModeTitle"))
   self.headlandModeTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandModeTT"))
   self.headlandModeSetting:setTexts({
@@ -119,7 +119,7 @@ function FS25_EnhancedVehicle_UI:onOpen()
       g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandModeOption2"),
       g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandModeOption3")
     })
-  -- headland distance
+
   self.headlandDistanceTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandDistanceTitle"))
   self.headlandDistanceTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandDistanceTT"))
   local _dists = {}
@@ -137,12 +137,12 @@ function FS25_EnhancedVehicle_UI:onOpen()
   end
   self.headlandDistanceSetting:setTexts(_dists)
 
-  -- headland sound trigger distance
+
   self.headlandSoundTriggerDistanceTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandSoundTriggerDistanceTitle"))
   self.headlandSoundTriggerDistanceTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_headlandSoundTriggerDistanceTT"))
   self.headlandSoundTriggerDistanceSetting:setTexts({ "5", "10", "15", "20" })
 
-  -- HUD elements
+
   for _, v in pairs(EV_elements_HUD) do
     local v1 = "HUD"..v.."Title"
     local v2 = "HUD"..v.."TT"
@@ -155,7 +155,7 @@ function FS25_EnhancedVehicle_UI:onOpen()
     })
   end
 
-  -- HUD dmg display mode
+
   self.HUDdmgAmountLeftTitle:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_HUDdmgAmountLeftTitle"))
   self.HUDdmgAmountLeftTT:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_HUDdmgAmountLeftTT"))
   self.HUDdmgAmountLeftSetting:setTexts({
@@ -166,43 +166,43 @@ function FS25_EnhancedVehicle_UI:onOpen()
   self:updateValues()
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:updateValues()
-  -- global elements
+
   for _, v in pairs(EV_elements_global) do
     local v3 = v.."Setting"
     self[v3]:setState(lC:getConfigValue("global.functions", v.."IsEnabled") and 1 or 2)
   end
 
-  -- HUD elements
+
   for _, v in pairs(EV_elements_HUD) do
     local v3 = "HUD"..v.."Setting"
     self[v3]:setState(lC:getConfigValue("hud."..v, "enabled") and 1 or 2)
   end
 
-  -- snap to angle
+
   self.snapSettingsAngleValue:setText(tostring(lC:getConfigValue("snap", "snapToAngle")))
 
-  -- visible tracks
+
   local _state = (lC:getConfigValue("track", "numberOfTracks") + 1) / 2
   self.visibleTracksSetting:setState(_state)
 
-  -- show lines
+
   self.showLinesSetting:setState(lC:getConfigValue("track", "showLines"))
 
-  -- hide lines
+
   self.hideLinesSetting:setState(lC:getConfigValue("track", "hideLines") and 1 or 2)
 
-  -- hide lines after
+
   self.hideLinesAfterSetting:setState(lC:getConfigValue("track", "hideLinesAfter"))
 
-  -- headland mode
+
   self.headlandModeSetting:setState(self.vehicle.vData.track.headlandMode)
 
-  -- headland distance
+
   local _state = 0
-  if self.vehicle.vData.track.headlandDistance == 9999 then --self.vehicle.vData.track.workWidth then
+  if self.vehicle.vData.track.headlandDistance == 9999 then
     _state = 1
   end
   local _i = 2
@@ -214,42 +214,42 @@ function FS25_EnhancedVehicle_UI:updateValues()
   end
   self.headlandDistanceSetting:setState(_state)
 
-  -- headland sound trigger distance
+
   self.headlandSoundTriggerDistanceSetting:setState(Between(Round(lC:getConfigValue("track", "headlandSoundTriggerDistance") / 5, 0), 1, 4))
 
-  -- HUD dmg display mode
+
   self.HUDdmgAmountLeftSetting:setState(lC:getConfigValue("hud.dmg", "showAmountLeft") and 1 or 2)
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:onClickOk()
   if debug > 1 then print("-> " .. myName .. ": onClickOk ") end
 
-  -- jump out if no vehicle is present
+
   if self.vehicle == nil then return end
 
   local state
 
-  -- global functions
+
   for _, v in pairs(EV_elements_global) do
     local v1 = v.."Setting"
     state = self[v1]:getState() == 1
     lC:setConfigValue("global.functions", v.."IsEnabled", state, true)
   end
 
-  -- HUD
+
   for _, v in pairs(EV_elements_HUD) do
     local v1 = "HUD"..v.."Setting"
     state = self[v1]:getState() == 1
     lC:setConfigValue("hud."..v, "enabled", state, true)
   end
 
-  -- HUD dmg display
+
   state = self.HUDdmgAmountLeftSetting:getState() == 1
   lC:setConfigValue("hud.dmg", "showAmountLeft", state, true)
 
-  -- snapto angle
+
   local n = tonumber(self.snapSettingsAngleValue:getText())
   if n ~= nil then
     if n <= 0 then n = 1 end
@@ -259,26 +259,26 @@ function FS25_EnhancedVehicle_UI:onClickOk()
   end
   lC:setConfigValue("snap", "snapToAngle", n, true)
 
-  -- visible tracks
+
   local _state = self.visibleTracksSetting:getState() * 2 - 1
   lC:setConfigValue("track", "numberOfTracks", _state, true)
 
-  -- show lines
+
   state = Between(self.showLinesSetting:getState(), 1, 4)
   lC:setConfigValue("track", "showLines", state, true)
 
-  -- hide lines
+
   state = self.hideLinesSetting:getState() == 1
   lC:setConfigValue("track", "hideLines", state, true)
 
-  -- hide lines after
+
   state = self.hideLinesAfterSetting:getState()
   lC:setConfigValue("track", "hideLinesAfter", state, true)
 
-  -- headland mode
+
   self.vehicle.vData.track.headlandMode = self.headlandModeSetting:getState()
 
-  -- headland distance
+
   local _state = self.headlandDistanceSetting:getState()
   self.vehicle.vData.track.headlandDistance = 0
   if _state == 1 then
@@ -292,34 +292,34 @@ function FS25_EnhancedVehicle_UI:onClickOk()
     _i = _i + 1
   end
 
-  -- headland sound trigger distance
+
   state = self.headlandSoundTriggerDistanceSetting:getState()
   lC:setConfigValue("track", "headlandSoundTriggerDistance", state * 5, true)
 
-  -- write and update our config
+
   lC:writeConfig()
   FS25_EnhancedVehicle:activateConfig()
   FS25_EnhancedVehicle_Event.sendEvent(self.vehicle)
 
-  -- update HUD
+
   if FS25_EnhancedVehicle.ui_hud ~= nil then
     FS25_EnhancedVehicle.ui_hud:storeScaledValues(true)
   end
 
-  -- close screen
+
   g_gui:closeDialogByName("FS25_EnhancedVehicle_UI")
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:onClickBack()
   if debug > 1 then print("-> " .. myName .. ": onClickBack ") end
 
-  -- close screen
+
   g_gui:closeDialogByName("FS25_EnhancedVehicle_UI")
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:onClickResetConfig()
   if debug > 1 then print("-> " .. myName .. ": onClickResetConfig ") end
@@ -331,7 +331,7 @@ function FS25_EnhancedVehicle_UI:onClickResetConfig()
   self:updateValues()
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:onClickReloadConfig(p1)
   if debug > 1 then print("-> " .. myName .. ": onClickReloadConfig ") end
@@ -342,7 +342,7 @@ function FS25_EnhancedVehicle_UI:onClickReloadConfig(p1)
   self:updateValues()
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_UI:onTextChanged_SnapAngle(_, text)
   local n = tonumber(text)

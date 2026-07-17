@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from pathlib import Path, PurePosixPath
+import re
 import sys
 import xml.etree.ElementTree as ElementTree
 import zipfile
@@ -13,13 +14,25 @@ import zipfile
 
 REPOSITORY = Path(__file__).resolve().parent.parent
 MANIFEST = REPOSITORY / "scripts" / "runtime-files.txt"
-EXPECTED_VERSION = "2.0.0.0"
+EXPECTED_VERSION = "2.0.0.1"
 EXPECTED_DESC_VERSION = "110"
 EXPECTED_TITLE = "Enhanced Vehicle Squared"
-EXPECTED_AUTHOR = "Enhanced Vehicle Squared contributors"
+EXPECTED_AUTHOR = "user01010111 and Enhanced Vehicle Squared contributors"
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 GUIDANCE_I3D = REPOSITORY / "resources" / "guidanceRibbon.i3d"
 TEST_RUNNER_NAME = "FS25_EV_TestRunner.lua"
+REMOVED_LEGACY_ASSETS = {
+    "misc/HUD.pdn",
+    "misc/diff_lock.wav",
+    "misc/diff_orig.png",
+    "misc/mod_example2.png",
+}
+ATTRIBUTION_ONLY_NAMES = {
+    "Majo" + "76",
+    "Zhoo" + "L",
+}
+TEXT_SUFFIXES = {".lua", ".md", ".py", ".sh", ".txt", ".xml", ".yml", ".yaml"}
+IGNORED_SOURCE_ROOTS = {".codex-finalisation", ".git", "build", "__pycache__"}
 
 
 class ValidationError(RuntimeError):
@@ -190,12 +203,51 @@ def translation_keys(path: Path) -> set[str]:
 def validate_translations() -> None:
     english = REPOSITORY / "translations" / "translation_en.xml"
     translation_keys(english)
-    translation_paths = sorted((REPOSITORY / "translations").glob("translation_*.xml"))
+    translation_paths = sorted(
+        path for path in (REPOSITORY / "translations").iterdir() if path.is_file()
+    )
     if translation_paths != [english]:
         found = ", ".join(path.name for path in translation_paths) or "none"
         raise ValidationError(
             "the project is English-only; expected only translation_en.xml, found " + found
         )
+
+
+def validate_source_hygiene(entries: list[str]) -> None:
+    for relative in sorted(REMOVED_LEGACY_ASSETS):
+        if relative in entries or (REPOSITORY / relative).exists():
+            raise ValidationError(f"removed legacy asset returned: {relative}")
+
+    for path in sorted(REPOSITORY.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
+            continue
+        relative = path.relative_to(REPOSITORY)
+        if relative.parts and relative.parts[0] in IGNORED_SOURCE_ROOTS:
+            continue
+        if relative.as_posix() == "ATTRIBUTION.md":
+            continue
+        text = path.read_text(encoding="utf-8")
+        present_names = sorted(name for name in ATTRIBUTION_ONLY_NAMES if name in text)
+        if present_names:
+            raise ValidationError(
+                f"historical contributor names must remain in ATTRIBUTION.md; "
+                f"found {', '.join(present_names)} in {relative}"
+            )
+
+    for entry in entries:
+        if not entry.endswith(".lua"):
+            continue
+        source = (REPOSITORY / entry).read_text(encoding="utf-8")
+        if re.search(r"(?im)^\s*changelog\s*$", source):
+            raise ValidationError(f"runtime source embeds a historical changelog: {entry}")
+        if re.search(r"(?m)^\s*--\s*#{3,}\s*$", source):
+            raise ValidationError(f"runtime source contains a decorative separator: {entry}")
+
+    ui_xml = (REPOSITORY / "ui" / "FS25_EnhancedVehicle_UI.xml").read_text(
+        encoding="utf-8"
+    )
+    if "<!--" in ui_xml:
+        raise ValidationError("UI XML contains redundant section comments")
 
 
 def validate_release_notes() -> None:
@@ -289,6 +341,7 @@ def main() -> int:
         validate_metadata()
         validate_release_isolation(entries)
         validate_translations()
+        validate_source_hygiene(entries)
         validate_release_notes()
         if arguments.archive is not None:
             validate_archive(arguments.archive.resolve(), entries)
@@ -296,7 +349,7 @@ def main() -> int:
         print(f"validation: {error}", file=sys.stderr)
         return 1
 
-    checked = "source metadata, XML, and translations"
+    checked = "source metadata, XML, English-only content, and hygiene"
     if arguments.archive is not None:
         checked += f", plus {arguments.archive}"
     print(f"Validated {checked}")

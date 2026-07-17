@@ -1,12 +1,12 @@
+-- Enhanced Vehicle Squared utility library for Farming Simulator 22+
 --
--- Library: libUtils (for Farming Simulator 22++)
+-- Maintained by user01010111 with Enhanced Vehicle Squared contributors.
+-- See LICENSE and ATTRIBUTION.md.
 --
--- Maintained by Enhanced Vehicle Squared contributors.
--- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
--- @Date: 17.07.2026
--- @Version: 1.0.0.1
 
--- #############################################################################
+
+
+
 
 local myName = "libUtils"
 
@@ -24,19 +24,19 @@ setmetatable(libUtils, {
   end,
 })
 
--- #############################################################################
+
 
 function libUtils:new()
   if self.debug > 0 then print("-> libUtils: new()") end
 end
 
--- #############################################################################
+
 
 function libUtils:setDebug(dbg)
   self.debug = dbg or 0
 end
 
--- #############################################################################
+
 
 function libUtils:args_to_txt(...)
   local args = { ... }

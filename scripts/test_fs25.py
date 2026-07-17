@@ -436,7 +436,7 @@ def ensure_mod_enabled(career_save: Path) -> None:
     text = raw.decode("utf-8-sig")
     replacement = (
         '    <mod modName="FS25_EnhancedVehicle" title="Enhanced Vehicle Squared" '
-        'version="2.0.0.0" required="false"/>'
+        'version="2.0.0.1" required="false"/>'
     )
     if MOD_LINE.search(text):
         text = MOD_LINE.sub(replacement, text)
