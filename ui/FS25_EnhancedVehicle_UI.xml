@@ -12,54 +12,44 @@
       <ThreePartBitmap profile="fs25_lineSeparatorTop" absoluteSizeOffset="100px 0px" position="0px -80px"/>
 
       <ScrollingLayout profile="fs25_settingsLayout" id="boxLayout" topClipperElementName="topClipper" bottomClipperElementName="bottomClipper" position="10px -110px" width="1560px" height="680px">
-        <!-- headland settings -->
         <Text profile="fs25_settingsSectionHeader" id="sectionHeadlandSettings"/>
-        <!-- headland mode -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <MultiTextOption profile="fs25_EVSettingsMultiTextOption" id="headlandModeSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="headlandModeTT"/>
           </MultiTextOption>
           <Text profile="fs25_EVMultiTextTitle" id="headlandModeTitle"/>
         </GuiElement>
-        <!-- headland distance -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <MultiTextOption profile="fs25_EVSettingsMultiTextOption" id="headlandDistanceSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="headlandDistanceTT"/>
           </MultiTextOption>
           <Text profile="fs25_EVMultiTextTitle" id="headlandDistanceTitle"/>
         </GuiElement>
-        <!-- headland sound trigger distance -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <MultiTextOption profile="fs25_EVSettingsMultiTextOption" id="headlandSoundTriggerDistanceSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="headlandSoundTriggerDistanceTT"/>
           </MultiTextOption>
           <Text profile="fs25_EVMultiTextTitle" id="headlandSoundTriggerDistanceTitle"/>
         </GuiElement>
-
-        <!-- snap settings -->
         <Text profile="fs25_settingsSectionHeader" id="sectionSnapSettings"/>
-        <!-- show lines -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <MultiTextOption profile="fs25_EVSettingsMultiTextOption" id="showLinesSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="showLinesTT"/>
           </MultiTextOption>
           <Text profile="fs25_EVMultiTextTitle" id="showLinesTitle"/>
         </GuiElement>
-        <!-- auto-hide lines -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="hideLinesSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="hideLinesTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="hideLinesTitle"/>
         </GuiElement>
-        <!-- auto-hide lines seconds -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <MultiTextOption profile="fs25_EVSettingsMultiTextOption" id="hideLinesAfterSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="hideLinesAfterTT"/>
           </MultiTextOption>
           <Text profile="fs25_EVMultiTextTitle" id="hideLinesAfterTitle"/>
         </GuiElement>
-        <!-- angle -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <TextInput profile="fs25_EVSettingsTextInput" id="snapSettingsAngleValue" focusOnHighlight="true" onTextChanged="onTextChanged_SnapAngle" imeKeyboardType="normal">
             <ThreePartBitmap profile="fs25_textInputBg"/>
@@ -70,38 +60,31 @@
           </TextInput>
           <Text profile="fs25_EVMultiTextTitle" id="snapSettingsAngleTitle"/>
         </GuiElement>
-        <!-- number of visible tracks -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <MultiTextOption profile="fs25_EVSettingsMultiTextOption" id="visibleTracksSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="visibleTracksTT"/>
           </MultiTextOption>
           <Text profile="fs25_EVMultiTextTitle" id="visibleTracksTitle"/>
         </GuiElement>
-
-        <!-- hud -->
         <Text profile="fs25_settingsSectionHeader" id="sectionHUD"/>
-        <!-- HUD: track -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDtrackSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDtrackTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDtrackTitle"/>
         </GuiElement>
-        <!-- HUD: diff -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDdiffSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDdiffTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDdiffTitle"/>
         </GuiElement>
-        <!-- HUD: park -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDparkSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDparkTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDparkTitle"/>
         </GuiElement>
-        <!-- HUD: dmg -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDdmgSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDdmgTT"/>
@@ -114,73 +97,61 @@
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDdmgAmountLeftTitle"/>
         </GuiElement>
-        <!-- HUD: fuel -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDfuelSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDfuelTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDfuelTitle"/>
         </GuiElement>
-        <!-- HUD: rpm -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDrpmSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDrpmTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDrpmTitle"/>
         </GuiElement>
-        <!-- HUD: temp -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDtempSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDtempTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDtempTitle"/>
         </GuiElement>
-        <!-- HUD: odometer -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDodoSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDodoTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDodoTitle"/>
         </GuiElement>
-        <!-- HUD: misc -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="HUDmiscSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="HUDmiscTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="HUDmiscTitle"/>
         </GuiElement>
-
-        <!-- global functions -->
         <Text profile="fs25_settingsSectionHeader" id="sectionGlobalFunctions"/>
-        <!-- snap -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="snapSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="snapTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="snapTitle"/>
         </GuiElement>
-        <!-- differential -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="diffSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="diffTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="diffTitle"/>
         </GuiElement>
-        <!-- hydraulic -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="hydraulicSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="hydraulicTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="hydraulicTitle"/>
         </GuiElement>
-        <!-- parking brake -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="parkingBrakeSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="parkingBrakeTT"/>
           </BinaryOption>
           <Text profile="fs25_EVMultiTextTitle" id="parkingBrakeTitle"/>
         </GuiElement>
-        <!-- odometer -->
         <GuiElement profile="fs25_EVSettingsMultiTextOptionWrapper">
           <BinaryOption profile="fs25_EVSettingsBinaryOption" id="odoMeterSetting">
             <Text profile="fs25_EVSettingsMultiTextOptionTooltip" name="ignore" id="odoMeterTT"/>
@@ -191,8 +162,6 @@
 
       <Bitmap profile="fs25_settingsTooltipSeparator" height="680px" position="915px -110px"/>
     </GuiElement>
-
-    <!-- buttons -->
     <BoxLayout profile="fs25_dialogButtonBox">
       <Button profile="fs25_EVRedButton" onClick="onClickResetConfig" id="resetConfigButton"/>
       <Bitmap profile="fs25_dialogButtonBoxSeparator"/>
@@ -205,8 +174,6 @@
       <Button profile="buttonOK" id="yesButton" text="$l10n_button_ok" onClick="onClickOk"/>
     </BoxLayout>
   </GuiElement>
-
-  <!-- scrollbar right -->
   <ThreePartBitmap profile="fs25_sliderDockedBg">
     <ThreePartBitmap profile="fs25_sliderDockedBox">
       <Slider profile="fs25_sliderDocked" dataElementId="boxLayout"/>

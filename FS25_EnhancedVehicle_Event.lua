@@ -1,9 +1,9 @@
+-- Enhanced Vehicle Squared legacy-compatible network event
 --
--- Project: Enhanced Vehicle Squared (legacy-compatible network event)
+-- Maintained by user01010111 with Enhanced Vehicle Squared contributors.
+-- See LICENSE and ATTRIBUTION.md.
 --
--- Maintained by Enhanced Vehicle Squared contributors.
--- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
---
+
 
 local myName = "EnhancedVehicleSquared_Event"
 
@@ -23,9 +23,9 @@ function FS25_EnhancedVehicle_Event.new(vehicle, snapshot)
   return self
 end
 
--- This serializer is shared by state events and the vehicle join stream. Keep
--- additions here so late joiners and live updates always reconstruct the same
--- state.
+-- State events and the vehicle join stream share this serializer. Preserve
+-- field order so late joiners and live updates reconstruct identical state.
+
 function FS25_EnhancedVehicle_Event.writeSnapshot(streamId, snapshot)
   local values = snapshot.values
   streamWriteBool(streamId,    values[1])
@@ -121,14 +121,14 @@ function FS25_EnhancedVehicle_Event:run(connection)
   end
 
   if connection:getIsServer() then
-    -- Canonical state received from the server.
+    -- A server snapshot is canonical for clients.
     local snapshot = FS25_EnhancedVehicle.sanitizeNetworkSnapshot(self.vehicle, self.snapshot, false)
     FS25_EnhancedVehicle.applyNetworkSnapshot(self.vehicle, snapshot, true)
     return
   end
 
-  -- Requests from clients are accepted only for the connection that currently
-  -- owns the vehicle. This also prevents forged node-object events.
+  -- Clients may mutate state only through the connection that owns the vehicle;
+  -- this also rejects forged node-object events.
   if self.vehicle.getOwnerConnection == nil or self.vehicle:getOwnerConnection() ~= connection then
     local now = g_time or 0
     local lastWarning = FS25_EnhancedVehicle.lastRejectedEventWarningTime
@@ -144,8 +144,8 @@ function FS25_EnhancedVehicle_Event:run(connection)
   FS25_EnhancedVehicle:updatevData(self.vehicle)
 
   local canonical = FS25_EnhancedVehicle.buildNetworkSnapshot(self.vehicle, false)
-  -- Include the sender so clamped/rejected fields and trip resets converge to
-  -- the same canonical server snapshot immediately.
+  -- Echo the canonical state so rejected fields and trip resets converge immediately.
+
   g_server:broadcastEvent(FS25_EnhancedVehicle_Event.new(self.vehicle, canonical), nil, nil, self.vehicle)
 end
 

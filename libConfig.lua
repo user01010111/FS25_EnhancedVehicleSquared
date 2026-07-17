@@ -1,12 +1,12 @@
+-- Enhanced Vehicle Squared configuration library for Farming Simulator 22+
 --
--- Library: libConfig (for Farming Simulator 22++)
+-- Maintained by user01010111 with Enhanced Vehicle Squared contributors.
+-- See LICENSE and ATTRIBUTION.md.
 --
--- Maintained by Enhanced Vehicle Squared contributors.
--- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
--- @Date: 17.07.2026
--- @Version: 1.0.1.0
 
--- #############################################################################
+
+
+
 
 local myName = "libConfig"
 
@@ -24,7 +24,7 @@ setmetatable(libConfig, {
   end,
 })
 
--- #############################################################################
+
 
 function libConfig:new(myName, configVersionCurrent, configVersionOld)
   if self.debug > 0 then print("-> libConfig: new()") end
@@ -33,18 +33,18 @@ function libConfig:new(myName, configVersionCurrent, configVersionOld)
   self.configVersionCurrent = configVersionCurrent
   self.configVersionOld     = configVersionOld
 
-  -- some stuff we need
+
   self.modDirectory      = g_currentModDirectory
   self.settingsDirectory = getUserProfileAppPath() .. "modSettings/"
   self.confDirectory     = self.settingsDirectory .. self.myName .. "/"
 
-  -- for storing all the data
+
   self.dataDefault = {}
   self.dataCurrent = {}
 
-  -- Per-load migration state.  The current version is always selected first;
-  -- a legacy file is retired only after the replacement has been saved and
-  -- opened successfully.
+  -- Per-load migration state selects the current file first and retires legacy
+  -- data only after the replacement is saved and reopened successfully.
+
   self.legacyCleanupFile = nil
   self.migrationSourceFile = nil
   self.currentConfigUnreadable = false
@@ -53,39 +53,39 @@ function libConfig:new(myName, configVersionCurrent, configVersionOld)
   self.fileAccessPolicySet = false
 end
 
--- #############################################################################
+
 
 function libConfig:setDebug(dbg)
   self.debug = dbg or 0
 end
 
--- #############################################################################
+
 
 function libConfig:clearConfig()
   self.dataDefault = {}
   self.dataCurrent = {}
 end
 
--- #############################################################################
+
 
 function libConfig:setFileAccessAllowed(allowed)
   self.fileAccessAllowed = allowed ~= false
   self.fileAccessPolicySet = true
 end
 
--- #############################################################################
+
 
 function libConfig:getFileAccessAllowed()
   if self.fileAccessPolicySet then
     return self.fileAccessAllowed ~= false
   end
-  -- Before a mission installs an explicit policy, keep the historical late
-  -- global as a defensive fallback.  A later client mission can explicitly
-  -- re-enable access even if process-global dedicated state is stale.
+  -- Before a mission sets policy, the late dedicated global is a defensive
+  -- fallback. A later client mission can explicitly re-enable file access.
+
   return self.fileAccessAllowed ~= false and g_dedicatedServerInfo == nil
 end
 
--- #############################################################################
+
 
 function libConfig:copyValue(value)
   if type(value) ~= "table" then
@@ -99,7 +99,7 @@ function libConfig:copyValue(value)
   return result
 end
 
--- #############################################################################
+
 
 function libConfig:getConfigFilename(version)
   if version == nil then
@@ -122,7 +122,7 @@ function libConfig:getConfigFilename(version)
   return self.confDirectory .. self.myName .. "_v" .. versionText .. ".xml"
 end
 
--- #############################################################################
+
 
 function libConfig:warningOnce(key, message)
   if self.reportedWarnings[key] then
@@ -138,13 +138,13 @@ function libConfig:warningOnce(key, message)
   end
 end
 
--- #############################################################################
+
 
 function libConfig:isXMLHandleValid(xml)
   return xml ~= nil and xml ~= 0
 end
 
--- #############################################################################
+
 
 function libConfig:releaseXMLHandle(xml)
   if self:isXMLHandleValid(xml) then
@@ -152,7 +152,7 @@ function libConfig:releaseXMLHandle(xml)
   end
 end
 
--- #############################################################################
+
 
 function libConfig:loadConfigFile(filename, applyValues, strictValues)
   if not self:getFileAccessAllowed() then
@@ -229,9 +229,9 @@ function libConfig:loadConfigFile(filename, applyValues, strictValues)
         error("unsupported configuration value type")
       end
 
-      -- Missing attributes intentionally inherit the registered default.  A
-      -- present attribute which the typed getter cannot parse is malformed and
-      -- must not be rewritten or used as a migration source.
+      -- Missing attributes inherit defaults. Present attributes that typed
+      -- getters cannot parse are malformed and must not be rewritten.
+
       if propertyExists and value == nil then
         error("configuration attribute has an invalid type")
       end
@@ -243,8 +243,8 @@ function libConfig:loadConfigFile(filename, applyValues, strictValues)
     end
   end)
 
-  -- XML entities are engine resources and must be released even when a getter
-  -- rejects malformed content.
+  -- XML handles are engine resources and must be released after parser errors.
+
   self:releaseXMLHandle(xml)
   if not parsed then
     return false
@@ -258,7 +258,7 @@ function libConfig:loadConfigFile(filename, applyValues, strictValues)
   return true
 end
 
--- #############################################################################
+
 
 function libConfig:discardFailedMigrationTarget()
   if not self:getFileAccessAllowed() then
@@ -283,13 +283,13 @@ function libConfig:discardFailedMigrationTarget()
   end
 end
 
--- #############################################################################
+
 
 function libConfig:addConfigValue(section, name, typ, value, newLine)
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") addConfigValue()") end
   if self.debug > 1 then print("--> section: "..section..", name: "..name..", typ: "..typ..", value: "..tostring(value)) end
 
-  -- create empty table node
+
   local newData = {}
   newData.section = section
   newData.typ     = typ
@@ -305,8 +305,8 @@ function libConfig:addConfigValue(section, name, typ, value, newLine)
     end
   end
 
-  -- Keep independent objects so changing the current value never mutates the
-  -- default used by the reset/reload paths.
+  -- Defaults and current values must remain independent objects.
+
   table.insert(self.dataDefault, {
     section = newData.section,
     typ = newData.typ,
@@ -319,13 +319,13 @@ function libConfig:addConfigValue(section, name, typ, value, newLine)
   if self.debug > 2 then print(DebugUtil.printTableRecursively(self.dataCurrent, 0, 0, 3)) end
 end
 
--- #############################################################################
+
 
 function libConfig:getConfigValue(section, name)
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") getConfigValue()") end
   if self.debug > 1 then print("--> section: "..section..", name: "..name) end
 
-  -- search through data
+
   for _, data in pairs(self.dataCurrent) do
     if data.section == section and data.name == name then
       if self.debug > 1 then print("---> typ: "..data.typ..", value: "..tostring(data.value)) end
@@ -336,21 +336,21 @@ function libConfig:getConfigValue(section, name)
   return(nil)
 end
 
--- #############################################################################
+
 
 function libConfig:setConfigValue(section, name, value, deferWrite)
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") setConfigValue()") end
   if self.debug > 1 then print("--> section: "..section..", name: "..name..", value: "..tostring(value)) end
 
-  -- search through data and change value
+
   for _, data in pairs(self.dataCurrent) do
     if data.section == section and data.name == name then
       data.value = value
     end
   end
 
-  -- Preserve the historical immediate-write behaviour for callers which do
-  -- not opt in to batching.
+  -- Callers that do not opt into batching retain immediate persistence.
+
   if not deferWrite then
     self:writeConfig()
   end
@@ -358,7 +358,7 @@ function libConfig:setConfigValue(section, name, value, deferWrite)
   if self.debug > 2 then print(DebugUtil.printTableRecursively(self.dataCurrent, 0, 0, 3)) end
 end
 
--- #############################################################################
+
 
 function libConfig:readConfig()
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") readConfig()") end
@@ -378,8 +378,8 @@ function libConfig:readConfig()
     return false, "invalidVersion", false
   end
 
-  -- A present current-version file is authoritative.  An unreadable current
-  -- file falls back to the caller's clean defaults and never resurrects v0.
+  -- A present current file is authoritative. If malformed, preserve it and use
+  -- clean defaults without resurrecting legacy state.
   if fileExists(currentFile) then
     self.confFile = currentFile
     if not self:loadConfigFile(currentFile, true) then
@@ -396,8 +396,8 @@ function libConfig:readConfig()
     return true, "current", true
   end
 
-  -- The legacy version is a one-time fallback only when there is a distinct,
-  -- writable current-version destination.
+  -- Legacy data is a one-time fallback only when the current destination differs.
+
   if oldFile ~= nil and oldFile ~= currentFile and fileExists(oldFile) then
     self.confFile = oldFile
     if not self:loadConfigFile(oldFile, true) then
@@ -423,7 +423,7 @@ function libConfig:readConfig()
   return false, "missing", true
 end
 
--- #############################################################################
+
 
 function libConfig:writeConfig()
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") writeConfig()") end
@@ -446,7 +446,7 @@ function libConfig:writeConfig()
   end
   if self.debug > 1 then print("--> confFile: "..self.confFile) end
 
-  -- create folders
+
   createFolder(self.settingsDirectory)
   createFolder(self.confDirectory);
 
@@ -499,8 +499,8 @@ function libConfig:writeConfig()
     return false, "saveFailed"
   end
 
-  -- saveXMLFile's boolean result is the engine's persistence contract.  Also
-  -- require the file to exist and reopen successfully before legacy cleanup.
+  -- Saving is successful only when the file exists and strict reopening matches.
+
   if not fileExists(self.confFile) or not self:loadConfigFile(self.confFile, false, true) then
     self:discardFailedMigrationTarget()
     self:warningOnce("verifyFailed:" .. self.confFile, "could not verify saved configuration; any legacy file was retained")
@@ -518,8 +518,8 @@ function libConfig:writeConfig()
       self:warningOnce(
         "cleanupFailed:" .. cleanupFile,
         "current configuration was saved, but legacy cleanup failed for " .. cleanupFile)
-      -- v1 remains authoritative on the next load even if the stale v0 file
-      -- could not be retired.
+      -- The verified current file remains authoritative even if legacy cleanup fails.
+
       self.legacyCleanupFile = nil
       self.migrationSourceFile = nil
       return true, "cleanupFailed"
@@ -532,7 +532,7 @@ function libConfig:writeConfig()
   return true, "written"
 end
 
--- #############################################################################
+
 
 function libConfig:getKeysSortedByValue(tbl, sortFunction)
   local keys = {}
@@ -547,7 +547,7 @@ function libConfig:getKeysSortedByValue(tbl, sortFunction)
   return keys
 end
 
--- #############################################################################
+
 
 function libConfig:splitter(str, pat, limit)
   local t = {}

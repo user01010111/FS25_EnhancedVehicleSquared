@@ -1,8 +1,8 @@
---
 -- Enhanced Vehicle Squared line renderer
 --
--- Draws persistent, filled scene geometry instead of debug lines. The caller
--- owns terrain sampling and must bracket all segments with beginFrame/endFrame.
+-- Maintained by user01010111 with Enhanced Vehicle Squared contributors.
+-- See LICENSE and ATTRIBUTION.md.
+-- beginFrame/endFrame bracket every caller-owned terrain-sampled frame.
 
 FS25_EnhancedVehicle_LineRenderer = {}
 local FS25_EnhancedVehicle_LineRenderer_mt = Class(FS25_EnhancedVehicle_LineRenderer)
@@ -62,7 +62,7 @@ local function findFirstMaterial(node)
   return nil
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer.new(modDirectory, maxSegments)
   local self = setmetatable({}, FS25_EnhancedVehicle_LineRenderer_mt)
@@ -81,7 +81,7 @@ function FS25_EnhancedVehicle_LineRenderer.new(modDirectory, maxSegments)
   return self
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer:load()
   if self.isLoaded then
@@ -114,10 +114,10 @@ function FS25_EnhancedVehicle_LineRenderer:load()
   end
   link(getRootNode(), group)
 
-  -- FS25 does not submit inline XML IndexedTriangleSet geometry reliably.
-  -- Build a supported CPU plane once, then pool clones of two-sided crossed
-  -- planes.  One pair lies on the terrain; the other pair keeps vertical posts
-  -- and near-camera diagnostics visible without depending on the view angle.
+  -- FS25 does not reliably submit inline XML triangle sets. Build a supported
+  -- CPU plane once, then use crossed two-sided clones for terrain ribbons and
+  -- vertical posts without view-angle dependence.
+
   local rotations = {
     { 0, 0, 0 },
     { math.pi, 0, 0 },
@@ -148,7 +148,7 @@ function FS25_EnhancedVehicle_LineRenderer:load()
   return true
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer:_acquireNode(index)
   if index > self.maxSegments then
@@ -182,7 +182,7 @@ function FS25_EnhancedVehicle_LineRenderer:_acquireNode(index)
   return node
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer:beginFrame()
   if not self.isLoaded then
@@ -199,11 +199,11 @@ function FS25_EnhancedVehicle_LineRenderer:beginFrame()
   return true
 end
 
--- #############################################################################
+-- Draw a prism between world-space endpoints. The unit mesh's +Z follows the
+-- segment; equal width and thickness produce a vertical marker post.
 
--- Draw a prism centered between two world-space endpoints. The unit mesh's
--- local +Z axis follows the segment. Width defaults to a horizontal ribbon;
--- pass POST_SIZE for both width and thickness to draw a vertical marker post.
+
+
 function FS25_EnhancedVehicle_LineRenderer:drawSegment(x1, y1, z1, x2, y2, z2, r, g, b, width, thickness)
   if not self.isFrameActive then
     return false
@@ -256,7 +256,7 @@ function FS25_EnhancedVehicle_LineRenderer:drawSegment(x1, y1, z1, x2, y2, z2, r
   return true
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer:endFrame()
   if not self.isLoaded then
@@ -271,7 +271,7 @@ function FS25_EnhancedVehicle_LineRenderer:endFrame()
   self.isFrameActive = false
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer:clear()
   if not self.isLoaded then
@@ -287,7 +287,7 @@ function FS25_EnhancedVehicle_LineRenderer:clear()
   self.isFrameActive = false
 end
 
--- #############################################################################
+
 
 function FS25_EnhancedVehicle_LineRenderer:delete()
   for _, node in ipairs(self.pool) do
