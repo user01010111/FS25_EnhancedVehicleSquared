@@ -1,1 +1,1 @@
-"""EnhancedVehicle validation tests."""
+"""Enhanced Vehicle Squared validation tests."""

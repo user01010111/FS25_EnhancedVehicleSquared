@@ -1,53 +1,78 @@
-# Enhanced Vehicle for Farming Simulator 25
+# Enhanced Vehicle Squared
 
-[![Validate release](https://github.com/user01010111/FS25_EnhancedVehicle/actions/workflows/validate.yml/badge.svg)](https://github.com/user01010111/FS25_EnhancedVehicle/actions/workflows/validate.yml)
+[![Validate release](https://github.com/user01010111/FS25_EnhancedVehicleSquared/actions/workflows/validate.yml/badge.svg)](https://github.com/user01010111/FS25_EnhancedVehicleSquared/actions/workflows/validate.yml)
 [![FS25 1.20.0.0+](https://img.shields.io/badge/FS25-1.20.0.0%2B-5b8c3a)](#compatibility)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-555555)](LICENSE)
 
-Track guidance, drivetrain controls, improved hydraulics, and a more useful
-vehicle HUD for Farming Simulator 25.
+Enhanced Vehicle Squared is the independently maintained continuation of the
+vehicle-control and guidance mod for Farming Simulator 25. It provides track
+guidance, drivetrain controls, grouped implement actions, and a more useful
+vehicle HUD.
 
-[Releases](https://github.com/user01010111/FS25_EnhancedVehicle/releases) ·
-[Report an issue](https://github.com/user01010111/FS25_EnhancedVehicle/issues) ·
-[Original project](https://github.com/ZhooL/FS25_EnhancedVehicle) ·
-[Deutsch](#deutsch)
+[Releases](https://github.com/user01010111/FS25_EnhancedVehicleSquared/releases) ·
+[Report an issue](https://github.com/user01010111/FS25_EnhancedVehicleSquared/issues) ·
+[Roadmap](ROADMAP.md) · [Contributing](CONTRIBUTING.md) ·
+[Attribution](ATTRIBUTION.md)
 
-> [!IMPORTANT]
-> This is an unofficial, community-maintained fork of
-> [Majo76/ZhooL's Enhanced Vehicle](https://github.com/ZhooL/FS25_EnhancedVehicle).
-> It independently provides compatibility and stability updates after the
-> original project ended development and was archived. No transfer of ownership
-> or official endorsement is implied.
+![Enhanced Vehicle Squared icon](misc/FS25_EnhancedVehicleSquared_Store.png)
 
-![Enhanced Vehicle HUD showing guidance and vehicle information](misc/hud_overview_en.png)
+## Why Squared exists
+
+The original project was discontinued, archived, and made read-only by its
+owner on 17 July 2026. Its last substantive code release was on 15 October
+2025, about 275 days earlier. On the day of archival, the remaining
+pull requests were closed without merge and the remaining issues were closed
+as not planned. The repository also received an explicit development-stopped
+notice.
+
+Taken together, those actions left users without an upstream maintenance path.
+Enhanced Vehicle Squared therefore treats the original project as abandoned
+for maintenance purposes. We have cancelled all upstream-contribution plans
+and will develop, review, test, and release changes from this repository.
+The detailed lineage and evidence links are recorded in [ATTRIBUTION.md](ATTRIBUTION.md).
 
 ## Installation
 
 1. Download `FS25_EnhancedVehicle.zip` from the
-   [latest release](https://github.com/user01010111/FS25_EnhancedVehicle/releases).
-2. Copy the ZIP file into the Farming Simulator 25 `mods` directory. Do not
-   extract it.
-3. Enable **Enhanced Vehicle** when loading a savegame.
+   [latest release](https://github.com/user01010111/FS25_EnhancedVehicleSquared/releases).
+2. Copy the ZIP into the Farming Simulator 25 `mods` directory. Do not extract
+   or rename it.
+3. Enable **Enhanced Vehicle Squared** when loading a savegame.
 
-Use release assets from this repository or the
-[original project](https://github.com/ZhooL/FS25_EnhancedVehicle/releases).
-Third-party repackaged downloads are not supported.
+Replace an existing `FS25_EnhancedVehicle.zip` in place. Do not install the old
+and new releases side by side.
+
+### Why the ZIP still has the old name
+
+Farming Simulator uses the ZIP basename as the technical mod identity. Squared
+intentionally retains `FS25_EnhancedVehicle.zip`, the existing Lua identifiers,
+input-action names, savegame keys, and `modSettings/FS25_EnhancedVehicle`
+configuration path. These are compatibility interfaces, not current branding.
+Keeping them preserves existing savegames, custom key bindings, multiplayer mod
+identity, configuration, and third-party integrations.
 
 ## Compatibility
 
-> [!NOTE]
-> Enhanced Vehicle 1.1.8.0 requires Farming Simulator 25 version 1.20.0.0 or
-> newer.
+Enhanced Vehicle Squared 2.0.0.0 requires Farming Simulator 25 version
+1.20.0.0 or newer. The project and all distributed user-facing text are English
+only. Console releases are not supported.
 
-### Highlights in 1.1.8.0
+## What changed in 2.0.0.0
 
-- More reliable dedicated-server operation and multiplayer synchronization
-- Correct HUD restoration when changing vehicles
-- Improved guidance direction and working-width calculation for unusual tool
-  carriers
-- Consistent guidance-line rendering across anti-aliasing modes
-- Safer vehicle-physics and hydraulic hook compatibility
-- Manifest-based release packaging and exact validated-artifact publication
+- Established the independent Enhanced Vehicle Squared identity and release
+  line
+- Added transactional licensed-test cleanup and protected mod-settings handling
+- Added strict structured test markers and exact source/archive comparison
+- Corrected guidance offset wrapping at track boundaries
+- Corrected grouped fold controls using Farming Simulator fold contracts
+- Corrected grass and headland ground-type classification
+- Made current-versus-legacy configuration precedence deterministic
+- Added verified configuration migration with malformed-file preservation
+- Classified dedicated processes early and prevented dedicated configuration
+  file access
+- Isolated client-only HUD, GUI, sound, and renderer resources from dedicated
+  servers
+- Reduced distributed language content to plain English
 
 ## Features
 
@@ -68,7 +93,7 @@ All controls can be changed through the in-game input settings.
 
 | Key | Action |
 | --- | --- |
-| <kbd>R Ctrl</kbd> + <kbd>Num /</kbd> | Open the Enhanced Vehicle settings |
+| <kbd>R Ctrl</kbd> + <kbd>Num /</kbd> | Open the Enhanced Vehicle Squared settings |
 | <kbd>Num Enter</kbd> | Apply or release the parking brake |
 | <kbd>R Ctrl</kbd> + <kbd>End</kbd> | Snap to the current direction or track |
 | <kbd>R Ctrl</kbd> + <kbd>Home</kbd> | Reverse the guidance direction by 180° |
@@ -99,82 +124,46 @@ All controls can be changed through the in-game input settings.
 ## Known limitations
 
 - Fuel-consumption and engine-temperature values may be inaccurate for
-  non-host players because the GIANTS Engine does not synchronize all required
-  data.
-- Enhanced Vehicle is not available on consoles.
-
-## Deutsch
-
-[Releases](https://github.com/user01010111/FS25_EnhancedVehicle/releases) ·
-[Problem melden](https://github.com/user01010111/FS25_EnhancedVehicle/issues) ·
-[Originalprojekt](https://github.com/ZhooL/FS25_EnhancedVehicle) ·
-[English](#enhanced-vehicle-for-farming-simulator-25)
-
-Enhanced Vehicle erweitert Fahrzeuge um einen Spurassistenten, das Einrasten in
-die Fahrtrichtung, eine Feststellbremse, Differenzialsperren, wählbare
-Antriebsmodi, verbesserte Hydrauliksteuerungen und ein erweitertes HUD.
-
-> Dieser inoffizielle, von der Community gepflegte Fork stellt
-> eigenständig Kompatibilitäts- und Stabilitätskorrekturen bereit, nachdem die
-> Weiterentwicklung des Originalprojekts eingestellt und dessen Repository
-> archiviert wurde. Eine Übertragung der Eigentümerschaft oder offizielle
-> Unterstützung durch den ursprünglichen Autor wird nicht beansprucht.
-
-### Installation
-
-1. `FS25_EnhancedVehicle.zip` aus dem
-   [neuesten Release](https://github.com/user01010111/FS25_EnhancedVehicle/releases)
-   herunterladen.
-2. Die ZIP-Datei unverändert in den `mods`-Ordner von Farming Simulator 25
-   kopieren.
-3. **Enhanced Vehicle** beim Laden des Spielstands aktivieren.
-
-Version 1.1.8.0 benötigt Farming Simulator 25 Version 1.20.0.0 oder neuer. Die
-Tastenbelegung kann in den Spieleinstellungen geändert werden; die
-Standardbelegung steht in der aufklappbaren Tabelle oben.
-
-![Enhanced Vehicle HUD mit Spurführung und Fahrzeuginformationen](misc/hud_overview_de.png)
-
-Bei Mitspielern, die nicht Host sind, können Kraftstoffverbrauch und
-Motortemperatur wegen Einschränkungen der GIANTS Engine ungenau sein. Enhanced
-Vehicle ist nicht für Konsolen verfügbar.
+  non-host players because the GIANTS Engine does not synchronize every
+  required value.
+- Automated networking checks simulate protocol behavior. The 2.0.0.0 release
+  candidate has licensed local client and dedicated-server coverage, but not a
+  genuine multi-machine multiplayer session.
+- Subjective visuals still require human review even where screenshot checks
+  cover line continuity and placement.
 
 ## Support
 
 Report reproducible problems through
-[GitHub Issues](https://github.com/user01010111/FS25_EnhancedVehicle/issues).
-Include the game version, mod version, single-player or multiplayer mode, and
-the relevant portion of `log.txt`.
+[GitHub Issues](https://github.com/user01010111/FS25_EnhancedVehicleSquared/issues).
+Include the game version, Squared version, single-player or multiplayer mode,
+other active mods, and the relevant portion of `log.txt`.
 
 ## Build and validation
 
-The release archive is generated from an explicit runtime-file manifest with
-fixed entry ordering, timestamps, and permissions. Python 3 and Lua 5.1 are
-required:
+The source repository contains automated tests and licensed-test tooling. None
+of those files are included in the production ZIP. The archive is generated
+from an explicit runtime manifest with fixed ordering, timestamps, permissions,
+and byte-for-byte source payload checks.
+
+Python 3 and Lua 5.1 are required:
 
 ```sh
-scripts/validate.sh
+LUA=lua5.1 LUAC=luac5.1 scripts/validate.sh
 ```
 
-This validates the source and creates `build/FS25_EnhancedVehicle.zip`. GitHub
-Actions runs the same checks for pushes and pull requests. DEFLATE output can
-vary between compression runtimes even when every uncompressed payload and ZIP
-metadata field is identical, so cross-toolchain byte identity is not claimed.
-For community release tags, the release asset is the exact archive validated in
-that tag's workflow run; the workflow also publishes its SHA-256 checksum.
+This creates `build/FS25_EnhancedVehicle.zip`. Every release tag must exactly
+match the version in `modDesc.xml`; the release workflow publishes the archive
+validated in that same workflow and its SHA-256 checksum.
 
-## Attribution and license
+## License and attribution
 
-Original work copyright © 2018–2025 **Majo76 (formerly ZhooL)**. The original
-source is available at
-[ZhooL/FS25_EnhancedVehicle](https://github.com/ZhooL/FS25_EnhancedVehicle).
-
-This fork contains modifications made in 2026 by its community contributors;
-the Git history records individual contributions. The original author remains
-credited in `modDesc.xml`.
-
-The project and this adapted version are licensed under the
+Enhanced Vehicle Squared is an adapted work released under the
 [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
-License](LICENSE). Redistribution must retain attribution, identify
-modifications, remain non-commercial, and use the same or a compatible
-ShareAlike license.
+License](LICENSE). Commercial use is not permitted, and adaptations must remain
+under the same or a compatible ShareAlike license.
+
+Required original-work credit, source identity, modification notices, retained
+historical contributor credit, and the no-endorsement statement are in
+[ATTRIBUTION.md](ATTRIBUTION.md). Both that file and the full license are also
+included inside every production ZIP.

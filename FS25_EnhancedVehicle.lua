@@ -1,13 +1,20 @@
 --
--- Mod: FS25_EnhancedVehicle
+-- Project: Enhanced Vehicle Squared
 --
--- Author: Majo76
--- email: ls (at) majo76 (dot) de
--- @Date: 15.07.2026
--- @Version: 1.1.8.0
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
+-- @Date: 17.07.2026
+-- @Version: 2.0.0.0
 
 --[[
 CHANGELOG
+
+2026-07-17 - V2.0.0.0
+* renamed the independently maintained project to Enhanced Vehicle Squared
+* hardened transactional licensed-test cleanup and validated release packaging
+* corrected guidance offset wrapping, grouped folding, and grass boundaries
+* made configuration migration deterministic and isolated dedicated servers
+* changed project and release text to English only
 
 2026-07-15 - V1.1.8.0
 * FS25 1.20 compatibility and dedicated-server lifecycle hardening
@@ -71,7 +78,7 @@ CHANGELOG
 license: https://creativecommons.org/licenses/by-nc-sa/4.0/
 ]]--
 
-local myName = "FS25_EnhancedVehicle"
+local myName = "EnhancedVehicleSquared"
 
 FS25_EnhancedVehicle = {}
 local FS25_EnhancedVehicle_mt = Class(FS25_EnhancedVehicle)
@@ -291,7 +298,7 @@ end
 -- #############################################################################
 
 function FS25_EnhancedVehicle:loadMap()
-  print("--> loaded FS25_EnhancedVehicle version " .. self.version .. " (by Majo76) <--");
+  print("--> loaded Enhanced Vehicle Squared version " .. self.version .. " <--");
 
   local mission = self.mission or g_currentMission
   lC:setFileAccessAllowed(not FS25_EnhancedVehicle.isDedicatedServerMission(mission))
@@ -314,7 +321,7 @@ end
 -- #############################################################################
 
 function FS25_EnhancedVehicle:unloadMap()
-  print("--> unloaded FS25_EnhancedVehicle version " .. self.version .. " (by Majo76) <--");
+  print("--> unloaded Enhanced Vehicle Squared version " .. self.version .. " <--");
 end
 
 -- #############################################################################
@@ -325,7 +332,7 @@ function FS25_EnhancedVehicle.installSpecializations(vehicleTypeManager, special
   specializationManager:addSpecialization("EnhancedVehicle", "FS25_EnhancedVehicle", Utils.getFilename("FS25_EnhancedVehicle.lua", modDirectory), nil)
 
   if specializationManager:getSpecializationByName("EnhancedVehicle") == nil then
-    print("ERROR: unable to add specialization 'FS25_EnhancedVehicle'")
+    print("ERROR: Enhanced Vehicle Squared could not add legacy specialization 'FS25_EnhancedVehicle'")
   else
     for typeName, typeDef in pairs(vehicleTypeManager.types) do
       if SpecializationUtil.hasSpecialization(Drivable,  typeDef.specializations) and
@@ -735,13 +742,13 @@ end
 function FS25_EnhancedVehicle:saveToXMLFile(xmlFile, key)
   if debug > 1 then print("-> " .. myName .. ": saveToXMLFile" .. mySelf(self)) end
 
-  if self.vData.is[1] ~= nil then  setXMLBool(xmlFile.handle,  key.."#frontDiffIsOn",    self.vData.is[1])  else print("-> EV: saveToXMLFile warning [1]")  end
-  if self.vData.is[2] ~= nil then  setXMLBool(xmlFile.handle,  key.."#backDiffIsOn",     self.vData.is[2])  else print("-> EV: saveToXMLFile warning [2]")  end
-  if self.vData.is[3] ~= nil then  setXMLInt(xmlFile.handle,   key.."#driveMode",        self.vData.is[3])  else print("-> EV: saveToXMLFile warning [3]")  end
-  if self.vData.is[13] ~= nil then setXMLBool(xmlFile.handle,  key.."#parkingBrakeIsOn", self.vData.is[13]) else print("-> EV: saveToXMLFile warning [13]") end
-  if self.vData.is[14] ~= nil then setXMLFloat(xmlFile.handle, key.."#odoMeter",         self.vData.is[14]) else print("-> EV: saveToXMLFile warning [14]") end
-  if self.vData.is[15] ~= nil then setXMLFloat(xmlFile.handle, key.."#tripMeter",        self.vData.is[15]) else print("-> EV: saveToXMLFile warning [15]") end
-  if self.vData.is[16] ~= nil then setXMLInt(xmlFile.handle,   key.."#odoMode",          self.vData.is[16]) else print("-> EV: saveToXMLFile warning [16]") end
+  if self.vData.is[1] ~= nil then  setXMLBool(xmlFile.handle,  key.."#frontDiffIsOn",    self.vData.is[1])  else print("-> EVS: saveToXMLFile warning [1]")  end
+  if self.vData.is[2] ~= nil then  setXMLBool(xmlFile.handle,  key.."#backDiffIsOn",     self.vData.is[2])  else print("-> EVS: saveToXMLFile warning [2]")  end
+  if self.vData.is[3] ~= nil then  setXMLInt(xmlFile.handle,   key.."#driveMode",        self.vData.is[3])  else print("-> EVS: saveToXMLFile warning [3]")  end
+  if self.vData.is[13] ~= nil then setXMLBool(xmlFile.handle,  key.."#parkingBrakeIsOn", self.vData.is[13]) else print("-> EVS: saveToXMLFile warning [13]") end
+  if self.vData.is[14] ~= nil then setXMLFloat(xmlFile.handle, key.."#odoMeter",         self.vData.is[14]) else print("-> EVS: saveToXMLFile warning [14]") end
+  if self.vData.is[15] ~= nil then setXMLFloat(xmlFile.handle, key.."#tripMeter",        self.vData.is[15]) else print("-> EVS: saveToXMLFile warning [15]") end
+  if self.vData.is[16] ~= nil then setXMLInt(xmlFile.handle,   key.."#odoMode",          self.vData.is[16]) else print("-> EVS: saveToXMLFile warning [16]") end
 end
 
 -- #############################################################################

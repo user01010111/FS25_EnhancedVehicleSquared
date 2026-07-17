@@ -1,11 +1,11 @@
-name: Validate release
+name: Validate Enhanced Vehicle Squared
 
 on:
   push:
     branches:
       - "**"
     tags:
-      - "v*-community.*"
+      - "v*"
   pull_request:
   workflow_dispatch:
 
@@ -25,27 +25,51 @@ jobs:
       - name: Validate and package
         run: scripts/validate.sh
 
+      - name: Validate release tag identity
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git fetch --no-tags origin main
+          tag_commit=$(git rev-parse HEAD)
+          main_commit=$(git rev-parse origin/main)
+          if [[ "$tag_commit" != "$main_commit" ]]; then
+            echo "Tag commit $tag_commit is not current origin/main $main_commit" >&2
+            exit 1
+          fi
+          version=$(python3 -c 'import xml.etree.ElementTree as ET; print(ET.parse("modDesc.xml").getroot().findtext("version").strip())')
+          expected_tag="v${version}"
+          if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match modDesc version $version" >&2
+            exit 1
+          fi
+          notes_file="release-notes/${GITHUB_REF_NAME}.md"
+          if [[ ! -f "$notes_file" ]]; then
+            echo "Release notes are missing: $notes_file" >&2
+            exit 1
+          fi
+
       - name: Upload validated mod archive
         uses: actions/upload-artifact@v4
         with:
-          name: FS25_EnhancedVehicle
+          name: FS25_EnhancedVehicleSquared-release
           path: build/FS25_EnhancedVehicle.zip
           if-no-files-found: error
 
   release:
     if: >-
       github.event_name == 'push' &&
-      startsWith(github.ref, 'refs/tags/') &&
-      contains(github.ref_name, '-community.')
+      startsWith(github.ref, 'refs/tags/')
     needs: validate
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Check out release notes
+        uses: actions/checkout@v4
+
       - name: Download the validated mod archive
         uses: actions/download-artifact@v4
         with:
-          name: FS25_EnhancedVehicle
+          name: FS25_EnhancedVehicleSquared-release
           path: build
 
       - name: Record validated archive identity
@@ -70,5 +94,5 @@ jobs:
             build/FS25_EnhancedVehicle.zip.sha256 \
             --repo "$GITHUB_REPOSITORY" \
             --verify-tag \
-            --title "$GITHUB_REF_NAME" \
-            --generate-notes
+            --title "Enhanced Vehicle Squared ${GITHUB_REF_NAME#v}" \
+            --notes-file "release-notes/${GITHUB_REF_NAME}.md"

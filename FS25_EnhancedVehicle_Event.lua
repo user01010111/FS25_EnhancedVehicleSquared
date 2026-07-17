@@ -1,11 +1,11 @@
 --
--- Mod: FS25_EnhancedVehicle_Event
+-- Project: Enhanced Vehicle Squared (legacy-compatible network event)
 --
--- Author: Majo76
--- Network snapshot/event hardening: EnhancedVehicle contributors
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
 --
 
-local myName = "FS25_EnhancedVehicle_Event"
+local myName = "EnhancedVehicleSquared_Event"
 
 FS25_EnhancedVehicle_Event = {}
 local FS25_EnhancedVehicle_Event_mt = Class(FS25_EnhancedVehicle_Event, Event)

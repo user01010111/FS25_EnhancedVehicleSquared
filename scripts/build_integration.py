@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a deterministic test-only EnhancedVehicle archive."""
+"""Build a deterministic test-only Enhanced Vehicle Squared archive."""
 
 from __future__ import annotations
 

@@ -1,9 +1,9 @@
 --
--- Lib: libUtils (for Farming Simulator 22++)
+-- Library: libUtils (for Farming Simulator 22++)
 --
--- Author: Majo76
--- email: ls (at) majo76 (dot) de
--- @Date: 02.05.2025
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
+-- @Date: 17.07.2026
 -- @Version: 1.0.0.1
 
 -- #############################################################################

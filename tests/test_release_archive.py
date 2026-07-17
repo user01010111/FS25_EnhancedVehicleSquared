@@ -74,6 +74,36 @@ class ReleaseArchiveTests(unittest.TestCase):
                 archive, [entry.as_posix() for entry in entries]
             )
 
+    def test_release_isolation_rejects_every_non_runtime_category(self) -> None:
+        forbidden = (
+            "nested/FS25_EV_TestRunner.lua",
+            "tests/case.lua",
+            "scripts/package.py",
+            "release-notes/v2.0.0.0.md",
+            ".codex-finalisation/report.md",
+            "build/recovery.bin",
+            "screenshots/client.png",
+            "client-screenshot.png",
+            "session.log",
+            "backup.zip",
+        )
+        for entry in forbidden:
+            with self.subTest(entry=entry):
+                with self.assertRaisesRegex(
+                    release_check.ValidationError,
+                    "prohibited non-runtime files",
+                ):
+                    release_check.validate_release_isolation(
+                        ["ATTRIBUTION.md", "LICENSE", entry]
+                    )
+
+    def test_release_isolation_requires_legal_notices(self) -> None:
+        with self.assertRaisesRegex(
+            release_check.ValidationError,
+            "required legal files",
+        ):
+            release_check.validate_release_isolation(["modDesc.xml"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate EnhancedVehicle source metadata, translations, and release ZIPs."""
+"""Validate Enhanced Vehicle Squared metadata and its compatibility ZIP."""
 
 from __future__ import annotations
 
@@ -13,8 +13,10 @@ import zipfile
 
 REPOSITORY = Path(__file__).resolve().parent.parent
 MANIFEST = REPOSITORY / "scripts" / "runtime-files.txt"
-EXPECTED_VERSION = "1.1.8.0"
+EXPECTED_VERSION = "2.0.0.0"
 EXPECTED_DESC_VERSION = "110"
+EXPECTED_TITLE = "Enhanced Vehicle Squared"
+EXPECTED_AUTHOR = "Enhanced Vehicle Squared contributors"
 ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 GUIDANCE_I3D = REPOSITORY / "resources" / "guidanceRibbon.i3d"
 TEST_RUNNER_NAME = "FS25_EV_TestRunner.lua"
@@ -111,6 +113,23 @@ def validate_metadata() -> None:
             f"modDesc version must be {EXPECTED_VERSION}, found {version!r}"
         )
 
+    title_children = list(root.findall("./title/*"))
+    title_languages = [element.tag for element in title_children]
+    if title_languages != ["en"] or (title_children[0].text or "").strip() != EXPECTED_TITLE:
+        raise ValidationError(
+            "modDesc title must contain only the English Enhanced Vehicle Squared title"
+        )
+    description_languages = [
+        element.tag for element in root.findall("./description/*")
+    ]
+    if description_languages != ["en"]:
+        raise ValidationError("modDesc description must contain only English")
+    author = (root.findtext("author") or "").strip()
+    if author != EXPECTED_AUTHOR:
+        raise ValidationError(
+            f"modDesc author must be {EXPECTED_AUTHOR!r}, found {author!r}"
+        )
+
     source_files = {
         element.get("filename")
         for element in root.findall("./extraSourceFiles/sourceFile")
@@ -120,16 +139,33 @@ def validate_metadata() -> None:
 
 
 def validate_release_isolation(entries: list[str]) -> None:
-    forbidden = [
-        entry
-        for entry in entries
-        if entry == TEST_RUNNER_NAME
-        or entry.startswith("tests/")
-        or entry.startswith("scripts/test_fs25")
-    ]
+    forbidden: list[str] = []
+    for entry in entries:
+        path = PurePosixPath(entry)
+        lowered = entry.lower()
+        if (
+            path.name == TEST_RUNNER_NAME
+            or entry.startswith("tests/")
+            or entry.startswith("scripts/")
+            or entry.startswith("release-notes/")
+            or entry.startswith(".codex-finalisation/")
+            or entry.startswith("build/")
+            or entry.startswith("screenshots/")
+            or "screenshot" in path.name.lower()
+            or lowered.endswith(".log")
+            or lowered.endswith(".zip")
+        ):
+            forbidden.append(entry)
     if forbidden:
         raise ValidationError(
-            "runtime manifest contains test-only files: " + ", ".join(forbidden)
+            "runtime manifest contains prohibited non-runtime files: "
+            + ", ".join(forbidden)
+        )
+    required_notices = {"ATTRIBUTION.md", "LICENSE"}
+    missing_notices = sorted(required_notices - set(entries))
+    if missing_notices:
+        raise ValidationError(
+            "runtime manifest omits required legal files: " + ", ".join(missing_notices)
         )
 
 
@@ -153,26 +189,28 @@ def translation_keys(path: Path) -> set[str]:
 
 def validate_translations() -> None:
     english = REPOSITORY / "translations" / "translation_en.xml"
-    expected = translation_keys(english)
+    translation_keys(english)
     translation_paths = sorted((REPOSITORY / "translations").glob("translation_*.xml"))
-    if len(translation_paths) < 2:
-        raise ValidationError("expected English plus at least one translated locale")
+    if translation_paths != [english]:
+        found = ", ".join(path.name for path in translation_paths) or "none"
+        raise ValidationError(
+            "the project is English-only; expected only translation_en.xml, found " + found
+        )
 
-    differences: list[str] = []
-    for path in translation_paths:
-        actual = translation_keys(path)
-        missing = sorted(expected - actual)
-        extra = sorted(actual - expected)
-        if missing:
-            differences.append(
-                f"{path.name}: missing English keys: {', '.join(missing)}"
-            )
-        if extra:
-            differences.append(
-                f"{path.name}: keys absent from English: {', '.join(extra)}"
-            )
-    if differences:
-        raise ValidationError("translation key mismatch\n  " + "\n  ".join(differences))
+
+def validate_release_notes() -> None:
+    path = REPOSITORY / "release-notes" / f"v{EXPECTED_VERSION}.md"
+    if not path.is_file():
+        raise ValidationError(
+            f"version-matched release notes are missing: {path.relative_to(REPOSITORY)}"
+        )
+    expected_heading = f"# Enhanced Vehicle Squared {EXPECTED_VERSION}"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    first_line = lines[0].strip() if lines else ""
+    if first_line != expected_heading:
+        raise ValidationError(
+            f"release notes must begin with {expected_heading!r}, found {first_line!r}"
+        )
 
 
 def validate_archive(path: Path, expected_entries: list[str]) -> None:
@@ -251,6 +289,7 @@ def main() -> int:
         validate_metadata()
         validate_release_isolation(entries)
         validate_translations()
+        validate_release_notes()
         if arguments.archive is not None:
             validate_archive(arguments.archive.resolve(), entries)
     except ValidationError as error:

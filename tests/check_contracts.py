@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate stable EnhancedVehicle input, save, and public-code contracts."""
+"""Validate Squared branding without breaking the legacy technical ABI."""
 
 from __future__ import annotations
 
@@ -91,6 +91,8 @@ def main() -> int:
                 "every input action must have a binding; missing="
                 f"{sorted(actions - bindings)}, extra={sorted(bindings - actions)}"
             )
+        if any(action.startswith("FS25_EnhancedVehicleSquared_") for action in actions):
+            fail("Squared-prefixed input actions would break existing custom bindings")
 
         source = (REPOSITORY / "FS25_EnhancedVehicle.lua").read_text(encoding="utf-8")
         save_keys = set(
@@ -108,6 +110,13 @@ def main() -> int:
         for function_name in sorted(PUBLIC_FUNCTIONS):
             if f"function {function_name}(" not in source:
                 fail(f"public helper is missing: {function_name}")
+        for required_source_contract in (
+            'savegame.key ..".FS25_EnhancedVehicle.EnhancedVehicle"',
+            'specializationManager:addSpecialization("EnhancedVehicle", "FS25_EnhancedVehicle"',
+            'vehicleTypeManager:addSpecialization(typeName, modName..".EnhancedVehicle")',
+        ):
+            if required_source_contract not in source:
+                fail(f"legacy save/specialization contract is missing: {required_source_contract}")
 
         loader = (REPOSITORY / "FS25_EnhancedVehicle_Loader.lua").read_text(
             encoding="utf-8"
@@ -117,6 +126,25 @@ def main() -> int:
                 fail(f"loader callback is missing: {callback}")
         if "FS25_EV_TestRunner.lua" in loader:
             fail("production loader references the test runner")
+        for required_loader_contract in (
+            'lC = libConfig("FS25_EnhancedVehicle", 1, 0)',
+            'getfenv(0)["g_EnhancedVehicle"]',
+            "mission.EnhancedVehicle",
+        ):
+            if required_loader_contract not in loader:
+                fail(f"legacy loader/config contract is missing: {required_loader_contract}")
+
+        event_source = (REPOSITORY / "FS25_EnhancedVehicle_Event.lua").read_text(
+            encoding="utf-8"
+        )
+        if 'InitEventClass(FS25_EnhancedVehicle_Event, "FS25_EnhancedVehicle_Event")' not in event_source:
+            fail("legacy network event identity changed")
+
+        package_source = (REPOSITORY / "scripts" / "package.py").read_text(
+            encoding="utf-8"
+        )
+        if '"build" / "FS25_EnhancedVehicle.zip"' not in package_source:
+            fail("production ZIP compatibility basename changed")
     except (OSError, ET.ParseError, RuntimeError, ValueError) as error:
         print(f"contract validation: {error}", file=sys.stderr)
         return 1

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a deterministic, runtime-only EnhancedVehicle mod archive."""
+"""Build the deterministic Enhanced Vehicle Squared compatibility archive."""
 
 from __future__ import annotations
 

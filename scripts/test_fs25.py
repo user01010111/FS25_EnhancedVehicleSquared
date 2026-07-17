@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the licensed local FS25 integration suite with transactional cleanup."""
+"""Run licensed Enhanced Vehicle Squared acceptance with transactional cleanup."""
 
 from __future__ import annotations
 
@@ -435,8 +435,8 @@ def ensure_mod_enabled(career_save: Path) -> None:
     has_bom = raw.startswith(b"\xef\xbb\xbf")
     text = raw.decode("utf-8-sig")
     replacement = (
-        '    <mod modName="FS25_EnhancedVehicle" title="EnhancedVehicle" '
-        'version="1.1.8.0" required="false"/>'
+        '    <mod modName="FS25_EnhancedVehicle" title="Enhanced Vehicle Squared" '
+        'version="2.0.0.0" required="false"/>'
     )
     if MOD_LINE.search(text):
         text = MOD_LINE.sub(replacement, text)
@@ -741,7 +741,7 @@ class ProtectedSession:
         if mode == "dedicated":
             if after != before:
                 issues.append(
-                    "dedicated EnhancedVehicle config changed before restoration"
+                    "dedicated Enhanced Vehicle Squared config changed before restoration"
                 )
         elif mode == "client":
             old_file = self.config_directory / CONFIG_V0
@@ -858,7 +858,7 @@ class ProtectedSession:
                 "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n"
                 "<gameserver>\n"
                 "  <settings>\n"
-                "    <game_name>EnhancedVehicle automated test</game_name>\n"
+                "    <game_name>Enhanced Vehicle Squared automated test</game_name>\n"
                 "    <admin_password>EVTestAdminOnly</admin_password>\n"
                 "    <game_password></game_password>\n"
                 f"    <savegame_index>{self.savegame_id}</savegame_index>\n"
@@ -1498,7 +1498,7 @@ def run_scenario(
 
 
 def write_junit(path: Path, scenarios: list[ScenarioResult], cleanup: list[str]) -> None:
-    suite = ET.Element("testsuite", name="FS25 EnhancedVehicle integration")
+    suite = ET.Element("testsuite", name="FS25 Enhanced Vehicle Squared integration")
     failures = 0
     skipped = 0
     count = 0

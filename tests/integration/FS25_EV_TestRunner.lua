@@ -250,7 +250,7 @@ case("mission_load", function()
   requireValue(g_EnhancedVehicle ~= nil, "g_EnhancedVehicle was not constructed")
   requireValue(g_currentMission.EnhancedVehicle == g_EnhancedVehicle,
     "mission EnhancedVehicle reference is inconsistent")
-  requireValue(g_EnhancedVehicle.version == "1.1.8.0", "unexpected mod version")
+  requireValue(g_EnhancedVehicle.version == "2.0.0.0", "unexpected mod version")
   requireValue(runner.statusStream ~= nil, "structured status stream is unavailable")
   return true
 end)
@@ -330,7 +330,7 @@ case("spawn_reverse_vehicle", function(self, dt, state)
     if vehicle == nil then return false end
     self.tractor = vehicle
     requireValue(vehicle.spec_reverseDriving ~= nil, "Valtra reverse-driving specialization missing")
-    requireValue(vehicle.vData ~= nil, "EnhancedVehicle specialization data missing")
+    requireValue(vehicle.vData ~= nil, "Enhanced Vehicle Squared specialization data missing")
     requireValue(vehicle.getIsRegistered == nil or not vehicle:getIsRegistered(),
       "test tractor was unexpectedly registered")
     requireValue(FS25_EnhancedVehicle.ui_hud ~= nil, "client HUD was not constructed")
@@ -726,7 +726,7 @@ function runner:update(dt)
        g_currentMission.cancelLoading == true then
       if self.startupWait > 120000 then
         self.complete = true
-        emit("FAIL", "mission_start", "mission or EnhancedVehicle did not become ready")
+        emit("FAIL", "mission_start", "mission or Enhanced Vehicle Squared did not become ready")
         emit("COMPLETE", "pass=0 fail=1 skip=0")
       end
       return
@@ -870,7 +870,7 @@ function runner:onDedicatedMissionLoaded(mission)
     requireValue(g_EnhancedVehicle ~= nil, "g_EnhancedVehicle was not constructed")
     requireValue(mission.EnhancedVehicle == g_EnhancedVehicle,
       "mission EnhancedVehicle reference is inconsistent")
-    requireValue(g_EnhancedVehicle.version == "1.1.8.0", "unexpected mod version")
+    requireValue(g_EnhancedVehicle.version == "2.0.0.0", "unexpected mod version")
     requireValue(self.statusStream ~= nil, "structured status stream is unavailable")
   end)
 

@@ -1,5 +1,5 @@
 --
--- FS25_EnhancedVehicle line renderer
+-- Enhanced Vehicle Squared line renderer
 --
 -- Draws persistent, filled scene geometry instead of debug lines. The caller
 -- owns terrain sampling and must bracket all segments with beginFrame/endFrame.
@@ -94,7 +94,7 @@ function FS25_EnhancedVehicle_LineRenderer:load()
 
   local rootNode, failedReason = loadI3DFile(self.filename, false, false, false)
   if rootNode == nil or rootNode == 0 then
-    logError("FS25_EnhancedVehicle could not load guidance-line geometry '%s' (reason %s)", self.filename, tostring(failedReason))
+    logError("Enhanced Vehicle Squared could not load guidance-line geometry '%s' (reason %s)", self.filename, tostring(failedReason))
     return false
   end
 
@@ -102,14 +102,14 @@ function FS25_EnhancedVehicle_LineRenderer:load()
   local material = findFirstMaterial(rootNode)
   if material == nil or material == 0 then
     delete(rootNode)
-    logError("FS25_EnhancedVehicle guidance-line material is unavailable in '%s'", self.filename)
+    logError("Enhanced Vehicle Squared guidance-line material is unavailable in '%s'", self.filename)
     return false
   end
 
-  local group = createTransformGroup("FS25_EnhancedVehicle_guidanceSegment")
+  local group = createTransformGroup("EnhancedVehicleSquared_guidanceSegment")
   if group == nil or group == 0 then
     delete(rootNode)
-    logError("FS25_EnhancedVehicle could not create a guidance-line transform group")
+    logError("Enhanced Vehicle Squared could not create a guidance-line transform group")
     return false
   end
   link(getRootNode(), group)
@@ -126,11 +126,11 @@ function FS25_EnhancedVehicle_LineRenderer:load()
   }
   for index, rotation in ipairs(rotations) do
     local plane = createPlaneShapeFrom2DContour(
-      "FS25_EnhancedVehicle_guidancePlane" .. tostring(index), UNIT_PLANE_CONTOUR, false)
+      "EnhancedVehicleSquared_guidancePlane" .. tostring(index), UNIT_PLANE_CONTOUR, false)
     if plane == nil or plane == 0 then
       delete(group)
       delete(rootNode)
-      logError("FS25_EnhancedVehicle could not create supported guidance-line geometry")
+      logError("Enhanced Vehicle Squared could not create supported guidance-line geometry")
       return false
     end
     link(group, plane)
@@ -153,7 +153,7 @@ end
 function FS25_EnhancedVehicle_LineRenderer:_acquireNode(index)
   if index > self.maxSegments then
     if not self.hasLoggedOverflow then
-      logWarning("FS25_EnhancedVehicle guidance-line renderer reached its %d-segment limit; extra segments are skipped", self.maxSegments)
+      logWarning("Enhanced Vehicle Squared guidance-line renderer reached its %d-segment limit; extra segments are skipped", self.maxSegments)
       self.hasLoggedOverflow = true
     end
 
@@ -168,7 +168,7 @@ function FS25_EnhancedVehicle_LineRenderer:_acquireNode(index)
   node = clone(self.templateNode, false, false, false)
   if node == nil or node == 0 then
     if not self.hasLoggedCloneFailure then
-      logError("FS25_EnhancedVehicle could not grow the guidance-line geometry pool")
+      logError("Enhanced Vehicle Squared could not grow the guidance-line geometry pool")
       self.hasLoggedCloneFailure = true
     end
 

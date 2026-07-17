@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Optionally validate EnhancedVehicle's APIs against an installed FS25 SDK."""
+"""Validate Enhanced Vehicle Squared APIs against the installed FS25 game."""
 
 from __future__ import annotations
 
