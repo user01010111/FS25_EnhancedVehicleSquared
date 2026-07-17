@@ -218,7 +218,8 @@ function FS25_EnhancedVehicle:onMissionLoaded(mission)
   if debug > 1 then print("-> " .. myName .. ": onMissionLoaded ") end
 
   -- Dedicated servers do not construct the client HUD/GUI objects.
-  if g_dedicatedServerInfo ~= nil or mission == nil or mission.hud == nil or
+  if FS25_EnhancedVehicle.isDedicatedServerMission(mission) or
+     mission == nil or mission.hud == nil or
      mission.hud.speedMeter == nil or mission.hud.gameInfoDisplay == nil or g_gui == nil then
     return
   end
@@ -269,17 +270,42 @@ end
 
 -- #############################################################################
 
+function FS25_EnhancedVehicle.isDedicatedServerMission(mission)
+  local isDedicatedProcess = g_dedicatedServer ~= nil and g_dedicatedServer ~= false
+  if mission ~= nil and type(mission.getIsServer) == "function" and
+     type(mission.getIsClient) == "function" then
+    local isServer = mission:getIsServer() == true
+    local isClient = mission:getIsClient() == true
+    -- FS25's -server launch keeps getIsClient() true during Mission00.load,
+    -- but exposes g_dedicatedServer before g_dedicatedServerInfo exists.
+    -- Requiring server authority prevents stale process state from disabling a
+    -- later ordinary client mission. Hosted and single-player missions have no
+    -- dedicated-process flag and therefore retain normal config behavior.
+    return isServer and (not isClient or isDedicatedProcess)
+  end
+
+  -- These are fallbacks only when the mission capability pair is unavailable.
+  return isDedicatedProcess or g_dedicatedServerInfo ~= nil
+end
+
+-- #############################################################################
+
 function FS25_EnhancedVehicle:loadMap()
   print("--> loaded FS25_EnhancedVehicle version " .. self.version .. " (by Majo76) <--");
 
+  local mission = self.mission or g_currentMission
+  lC:setFileAccessAllowed(not FS25_EnhancedVehicle.isDedicatedServerMission(mission))
+
   -- first set our current and default config to default values
   FS25_EnhancedVehicle:resetConfig()
-  -- then read values from disk and "overwrite" current config
-  local _, _, shouldWriteConfig = lC:readConfig()
-  -- Write the merged defaults/current values or complete a verified legacy
-  -- migration.  Unreadable files are retained for manual recovery.
-  if shouldWriteConfig then
-    lC:writeConfig()
+  if lC:getFileAccessAllowed() then
+    -- then read values from disk and "overwrite" current config
+    local _, _, shouldWriteConfig = lC:readConfig()
+    -- Write the merged defaults/current values or complete a verified legacy
+    -- migration.  Unreadable files are retained for manual recovery.
+    if shouldWriteConfig then
+      lC:writeConfig()
+    end
   end
   -- and finally activate current config
   FS25_EnhancedVehicle:activateConfig()

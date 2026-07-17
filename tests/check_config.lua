@@ -75,13 +75,14 @@ function loadXMLFile(_, filename)
     values = copyTable(file.values),
     invalidKeys = copyTable(file.invalidKeys),
     hasRoot = file.hasRoot ~= false,
+    rootName = file.rootName or "ConfigTest",
     released = false,
   }
 end
 
 function hasXMLProperty(xml, property)
   state.calls.hasXMLProperty = state.calls.hasXMLProperty + 1
-  if property == "ConfigTest" then return xml.hasRoot end
+  if property == xml.rootName then return xml.hasRoot end
   return xml.values[property] ~= nil or xml.invalidKeys[property] == true
 end
 
@@ -90,11 +91,17 @@ function createFolder(_)
   return true
 end
 
-function createXMLFile(_, filename, _)
+function createXMLFile(_, filename, rootName)
   state.calls.createXMLFile = state.calls.createXMLFile + 1
   if state.failCreate then return 0 end
   state.opened = state.opened + 1
-  return { filename = filename, values = {}, released = false }
+  return {
+    filename = filename,
+    values = {},
+    hasRoot = true,
+    rootName = rootName,
+    released = false,
+  }
 end
 
 local function getValue(xml, key)
@@ -127,7 +134,11 @@ function saveXMLFile(xml)
     return false
   end
   local storedValues = state.corruptSavedValues and {} or copyTable(xml.values)
-  state.files[xml.filename] = { values = storedValues, hasRoot = true }
+  state.files[xml.filename] = {
+    values = storedValues,
+    hasRoot = true,
+    rootName = xml.rootName,
+  }
   return true
 end
 
@@ -555,4 +566,182 @@ do
   assertBalanced("setter failure")
 end
 
-print("Validated deterministic config precedence, migration, failures, and XML cleanup")
+-- Exercise the production loadMap role decision with the same file/XML spies.
+-- This verifies that the explicit policy is installed early enough to cover
+-- direct and indirect write paths.
+function Class(classTable)
+  return { __index = classTable }
+end
+Utils.overwrittenFunction = function(_, replacement) return replacement end
+WheelsUtil = {
+  getSmoothedAcceleratorAndBrakePedals = function(_, accelerator, brake)
+    return accelerator, brake
+  end,
+}
+dofile("FS25_EnhancedVehicle.lua")
+FS25_EnhancedVehicle.sections = {
+  "fuel", "dmg", "misc", "rpm", "temp", "diff", "track", "park", "odo",
+}
+FS25_EnhancedVehicle.hud = {}
+
+local evCurrentFile =
+  "/profile/modSettings/FS25_EnhancedVehicle/FS25_EnhancedVehicle_v1.xml"
+local evOldFile =
+  "/profile/modSettings/FS25_EnhancedVehicle/FS25_EnhancedVehicle_v0.xml"
+local featureNames = {
+  "diffIsEnabled",
+  "hydraulicIsEnabled",
+  "snapIsEnabled",
+  "parkingBrakeIsEnabled",
+  "odoMeterIsEnabled",
+}
+
+local function evFeatureValues(value)
+  local result = {}
+  for _, name in ipairs(featureNames) do
+    result["FS25_EnhancedVehicle.global.functions(0)#" .. name] = value
+  end
+  return result
+end
+
+local function installEV(filename, value)
+  state.files[filename] = {
+    values = evFeatureValues(value),
+    rootName = "FS25_EnhancedVehicle",
+  }
+end
+
+local function missionRole(isServer, isClient, isMultiplayer, dynamicIsClient)
+  local mission = {
+    getIsServer = function() return isServer end,
+    getIsClient = function() return isClient end,
+  }
+  if isMultiplayer ~= nil or dynamicIsClient ~= nil then
+    mission.missionDynamicInfo = {
+      isMultiplayer = isMultiplayer,
+      isClient = dynamicIsClient,
+    }
+  end
+  return mission
+end
+
+local function runLoad(mission)
+  local enhancedVehicle = { mission = mission, version = "test" }
+  FS25_EnhancedVehicle.loadMap(enhancedVehicle)
+end
+
+local function assertFeatures(value, label)
+  for _, name in ipairs(featureNames) do
+    local fieldName = "function" .. string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
+    assertEqual(FS25_EnhancedVehicle[fieldName], value, label .. " " .. name)
+  end
+end
+
+local function configAPICallCount()
+  local count = 0
+  for _, calls in pairs(state.calls) do count = count + calls end
+  return count
+end
+
+g_currentMission = nil
+g_dedicatedServer = nil
+g_dedicatedServerInfo = nil
+lC = libConfig("FS25_EnhancedVehicle", 1, 0)
+
+-- The early mission capability pair, not the late global, identifies a
+-- headless server.  Stale profile files cannot disable authoritative defaults.
+resetEngine()
+installEV(evCurrentFile, false)
+installEV(evOldFile, false)
+runLoad(missionRole(true, false, true, false))
+assertFalse(lC:getFileAccessAllowed(), "dedicated file policy")
+assertFeatures(true, "dedicated defaults")
+assertEqual(configAPICallCount(), 0, "dedicated zero config API calls")
+assertEqual(state.opened, 0, "dedicated zero XML handles")
+assertFalse(lC:loadConfigFile(evCurrentFile, true),
+  "dedicated direct config load helper")
+lC.migrationSourceFile = evOldFile
+lC.confFile = evCurrentFile
+lC:discardFailedMigrationTarget()
+assertEqual(configAPICallCount(), 0, "dedicated helper APIs suppressed")
+
+-- Sanitization and public immediate-write paths still mutate memory while the
+-- central policy prevents every indirect filesystem operation.
+lC:setConfigValue("snap", "snapToAngle", "invalid", true)
+FS25_EnhancedVehicle:activateConfig()
+FS25_EnhancedVehicle:functionEnable("snap", false)
+assertEqual(configAPICallCount(), 0, "dedicated indirect writes suppressed")
+assertEqual(state.opened, 0, "dedicated indirect zero XML handles")
+
+-- The licensed -server lifecycle reports getIsClient()==true during load, but
+-- exposes the earlier dedicated-process flag. This is still headless and must
+-- be denied before any config operation.
+resetEngine()
+installEV(evCurrentFile, false)
+installEV(evOldFile, false)
+g_dedicatedServer = true
+runLoad(missionRole(true, true, true, false))
+assertFalse(lC:getFileAccessAllowed(), "server launch file policy")
+assertFeatures(true, "server launch defaults")
+assertEqual(configAPICallCount(), 0, "server launch zero config API calls")
+assertEqual(state.opened, 0, "server launch zero XML handles")
+local lateDedicatedMission = missionRole(true, true, true, false)
+lateDedicatedMission.hud = { speedMeter = {}, gameInfoDisplay = {} }
+g_gui = {}
+FS25_EnhancedVehicle:onMissionLoaded(lateDedicatedMission)
+g_gui = nil
+g_dedicatedServer = nil
+
+-- A hosted/listen server has both capabilities and retains normal config I/O.
+resetEngine()
+installEV(evCurrentFile, false)
+-- A server-side dynamic role alone is intentionally not a dedicated signal.
+runLoad(missionRole(true, true, true, false))
+assertTrue(lC:getFileAccessAllowed(), "hosted file policy")
+assertFeatures(false, "hosted stored values")
+assertTrue(configAPICallCount() > 0, "hosted config API calls")
+assertBalanced("hosted")
+
+-- A following ordinary client on the same config object re-enables I/O and
+-- completes a legacy migration, proving denial is mission-scoped.
+resetEngine()
+installEV(evOldFile, false)
+g_dedicatedServer = true
+g_dedicatedServerInfo = {}
+runLoad(missionRole(false, true, true, true))
+assertTrue(lC:getFileAccessAllowed(), "client file policy")
+assertFeatures(false, "client migrated values")
+assertTrue(state.files[evCurrentFile] ~= nil, "client migration current exists")
+assertEqual(state.files[evOldFile], nil, "client migration old retired")
+assertBalanced("client migration")
+g_dedicatedServer = nil
+g_dedicatedServerInfo = nil
+
+-- Single-player is also server+client and therefore uses profile config.
+resetEngine()
+installEV(evCurrentFile, false)
+runLoad(missionRole(true, true, false, true))
+assertTrue(lC:getFileAccessAllowed(), "single-player file policy")
+assertFeatures(false, "single-player stored values")
+assertTrue(configAPICallCount() > 0, "single-player config API calls")
+assertBalanced("single-player")
+
+-- Re-entering dedicated mode recomputes denial and clean defaults again.
+resetEngine()
+installEV(evCurrentFile, false)
+installEV(evOldFile, false)
+runLoad(missionRole(true, false, true, false))
+assertFalse(lC:getFileAccessAllowed(), "repeated dedicated file policy")
+assertFeatures(true, "repeated dedicated defaults")
+assertEqual(configAPICallCount(), 0, "repeated dedicated zero config API calls")
+
+-- The late global remains only a defensive fallback when mission getters are
+-- unavailable.
+g_dedicatedServerInfo = {}
+assertTrue(FS25_EnhancedVehicle.isDedicatedServerMission({}), "late dedicated fallback")
+g_dedicatedServerInfo = nil
+g_dedicatedServer = true
+assertTrue(FS25_EnhancedVehicle.isDedicatedServerMission({}), "early dedicated fallback")
+g_dedicatedServer = nil
+
+print("Validated config migration, XML cleanup, and dedicated lifecycle isolation")

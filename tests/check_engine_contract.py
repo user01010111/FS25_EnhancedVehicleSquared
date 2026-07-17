@@ -13,6 +13,7 @@ import zipfile
 VEHICLE_LOADING = "dataS/scripts/vehicles/VehicleLoadingData.lua"
 REVERSE_DRIVING = "dataS/scripts/vehicles/specializations/ReverseDriving.lua"
 SETTINGS_MODEL = "dataS/scripts/gui/base/SettingsModel.lua"
+INGAME_MAP = "dataS/scripts/gui/hud/ingameMap/IngameMap.lua"
 
 REQUIRED_ZIP_TOKENS = {
     VEHICLE_LOADING: (
@@ -33,6 +34,10 @@ REQUIRED_ZIP_TOKENS = {
         "getSupportsPostProcessAntiAliasing",
         "setMSAA",
         "setDLSSQuality",
+    ),
+    INGAME_MAP: (
+        "missionDynamicInfo.isMultiplayer",
+        "missionDynamicInfo.isClient",
     ),
 }
 

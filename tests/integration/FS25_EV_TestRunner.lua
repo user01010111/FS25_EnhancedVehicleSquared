@@ -15,12 +15,85 @@ FS25_EV_TestRunner = {
   pendingLoads = {},
   spawnedVehicles = {},
   captures = {},
-  startupWait = 0
+  startupWait = 0,
+  configIOCount = 0,
+  configIOEvents = {},
+  earlyDedicatedState = nil
 }
 
 local runner = FS25_EV_TestRunner
 local DEFAULT_CASE_TIMEOUT = 45000
 local testModDirectory = g_currentModDirectory
+
+-- Test-only instrumentation is installed after the production loader creates
+-- lC but before Mission00.load.  It records only accesses to EnhancedVehicle's
+-- own config paths, leaving all unrelated engine/profile I/O untouched.
+local configHandles = {}
+local function isConfigPath(path)
+  if type(path) ~= "string" or lC == nil then return false end
+  return path == lC.confDirectory or
+    string.sub(path, 1, string.len(lC.confDirectory)) == lC.confDirectory
+end
+
+local function recordConfigIO(name, target)
+  runner.configIOCount = runner.configIOCount + 1
+  table.insert(runner.configIOEvents, name .. ":" .. tostring(target or ""))
+end
+
+local originalFileExists = fileExists
+fileExists = function(filename, ...)
+  if isConfigPath(filename) then recordConfigIO("fileExists", filename) end
+  return originalFileExists(filename, ...)
+end
+
+local originalLoadXMLFile = loadXMLFile
+loadXMLFile = function(objectName, filename, ...)
+  if isConfigPath(filename) then recordConfigIO("loadXMLFile", filename) end
+  local xml = originalLoadXMLFile(objectName, filename, ...)
+  if isConfigPath(filename) and xml ~= nil and xml ~= 0 then
+    configHandles[xml] = true
+  end
+  return xml
+end
+
+local originalCreateXMLFile = createXMLFile
+createXMLFile = function(objectName, filename, rootName, ...)
+  if isConfigPath(filename) then recordConfigIO("createXMLFile", filename) end
+  local xml = originalCreateXMLFile(objectName, filename, rootName, ...)
+  if isConfigPath(filename) and xml ~= nil and xml ~= 0 then
+    configHandles[xml] = true
+  end
+  return xml
+end
+
+local originalCreateFolder = createFolder
+createFolder = function(path, ...)
+  if isConfigPath(path) then recordConfigIO("createFolder", path) end
+  return originalCreateFolder(path, ...)
+end
+
+local originalSaveXMLFile = saveXMLFile
+saveXMLFile = function(xml, ...)
+  if configHandles[xml] then recordConfigIO("saveXMLFile", xml) end
+  return originalSaveXMLFile(xml, ...)
+end
+
+local originalDeleteFile = deleteFile
+if type(originalDeleteFile) == "function" then
+  deleteFile = function(filename, ...)
+    if isConfigPath(filename) then recordConfigIO("deleteFile", filename) end
+    return originalDeleteFile(filename, ...)
+  end
+end
+
+local originalDelete = delete
+delete = function(object, ...)
+  if configHandles[object] then
+    recordConfigIO("delete", object)
+    configHandles[object] = nil
+  end
+  return originalDelete(object, ...)
+end
 
 local function openStatusStream()
   if io == nil or io.open == nil or getUserProfileAppPath == nil then return nil end
@@ -179,6 +252,30 @@ case("mission_load", function()
     "mission EnhancedVehicle reference is inconsistent")
   requireValue(g_EnhancedVehicle.version == "1.1.8.0", "unexpected mod version")
   requireValue(runner.statusStream ~= nil, "structured status stream is unavailable")
+  return true
+end)
+
+case("config_lifecycle", function()
+  local mission = g_currentMission
+  if FS25_EnhancedVehicle.isDedicatedServerMission(mission) then
+    return skip("dedicated server")
+  end
+
+  requireValue(lC:getFileAccessAllowed(), "client config file policy is disabled")
+  requireValue(FS25_EnhancedVehicle.showKeysInHelpMenu == false,
+    "controlled legacy client value was not loaded")
+  requireValue(FS25_EnhancedVehicle.functionDiffIsEnabled == true and
+               FS25_EnhancedVehicle.functionHydraulicIsEnabled == true and
+               FS25_EnhancedVehicle.functionSnapIsEnabled == true and
+               FS25_EnhancedVehicle.functionParkingBrakeIsEnabled == true and
+               FS25_EnhancedVehicle.functionOdoMeterIsEnabled == true,
+    "controlled client feature defaults were not preserved")
+  local oldFile = lC:getConfigFilename(lC.configVersionOld)
+  local currentFile = lC:getConfigFilename(lC.configVersionCurrent)
+  requireValue(oldFile ~= nil and not fileExists(oldFile),
+    "legacy client configuration was not retired")
+  requireValue(currentFile ~= nil and fileExists(currentFile),
+    "migrated client configuration is missing")
   return true
 end)
 
@@ -670,10 +767,87 @@ function runner:deleteMap()
 end
 
 -- A dedicated server does not call mod-event-listener update methods until a
--- client has joined, even when pause_game_if_empty is disabled.  Run the
--- server-only smoke checks from the mission-finished lifecycle instead.  This
--- callback fires after EnhancedVehicle's own appended callback, so it verifies
--- the fully initialized mod without requiring a second licensed client.
+-- client has joined, even when pause_game_if_empty is disabled. Capture the
+-- early config state after EnhancedVehicle.loadMap, then run the full smoke
+-- checks from the mission-finished lifecycle so late client resources are also
+-- verified without requiring a second licensed client.
+local function isTestDedicatedMission(mission)
+  if mission == nil or type(mission.getIsServer) ~= "function" or
+     mission:getIsServer() ~= true then
+    return false
+  end
+  local isDedicatedProcess = g_dedicatedServer ~= nil and g_dedicatedServer ~= false
+  local hasNoClient = type(mission.getIsClient) == "function" and
+    mission:getIsClient() == false
+  return isDedicatedProcess or hasNoClient
+end
+
+local function missionRoleState(mission)
+  local dynamicInfo = mission ~= nil and mission.missionDynamicInfo or nil
+  local hasGetIsServer = mission ~= nil and type(mission.getIsServer) == "function"
+  local hasGetIsClient = mission ~= nil and type(mission.getIsClient) == "function"
+  local hasDynamicMultiplayer = dynamicInfo ~= nil and
+    type(dynamicInfo.isMultiplayer) == "boolean"
+  local hasDynamicClient = dynamicInfo ~= nil and type(dynamicInfo.isClient) == "boolean"
+  local getIsServer = nil
+  local getIsClient = nil
+  local dynamicIsMultiplayer = nil
+  local dynamicIsClient = nil
+  if hasGetIsServer then getIsServer = mission:getIsServer() end
+  if hasGetIsClient then getIsClient = mission:getIsClient() end
+  if hasDynamicMultiplayer then dynamicIsMultiplayer = dynamicInfo.isMultiplayer end
+  if hasDynamicClient then dynamicIsClient = dynamicInfo.isClient end
+  return {
+    hasGetIsServer = hasGetIsServer,
+    getIsServer = getIsServer,
+    hasGetIsClient = hasGetIsClient,
+    getIsClient = getIsClient,
+    hasDynamicMultiplayer = hasDynamicMultiplayer,
+    dynamicIsMultiplayer = dynamicIsMultiplayer,
+    hasDynamicClient = hasDynamicClient,
+    dynamicIsClient = dynamicIsClient,
+    hasDedicatedServer = g_dedicatedServer ~= nil,
+    dedicatedServer = g_dedicatedServer,
+    hasDedicatedInfo = g_dedicatedServerInfo ~= nil,
+    hasServer = g_server ~= nil,
+    hasClient = g_client ~= nil,
+  }
+end
+
+local function authoritativeFeaturesEnabled()
+  return FS25_EnhancedVehicle.functionDiffIsEnabled == true and
+    FS25_EnhancedVehicle.functionHydraulicIsEnabled == true and
+    FS25_EnhancedVehicle.functionSnapIsEnabled == true and
+    FS25_EnhancedVehicle.functionParkingBrakeIsEnabled == true and
+    FS25_EnhancedVehicle.functionOdoMeterIsEnabled == true
+end
+
+function runner:onEnhancedVehicleLoadMap(enhancedVehicle)
+  local mission = enhancedVehicle ~= nil and enhancedVehicle.mission or nil
+  local role = missionRoleState(mission)
+  print(string.format(
+    "EVTEST ROLE hasServerGetter=%s server=%s hasClientGetter=%s client=%s " ..
+      "hasMultiplayer=%s multiplayer=%s hasDynamicClient=%s dynamicClient=%s " ..
+      "hasDedicatedServer=%s dedicatedServer=%s dedicatedInfo=%s gServer=%s gClient=%s",
+    tostring(role.hasGetIsServer), tostring(role.getIsServer),
+    tostring(role.hasGetIsClient), tostring(role.getIsClient),
+    tostring(role.hasDynamicMultiplayer),
+    tostring(role.dynamicIsMultiplayer),
+    tostring(role.hasDynamicClient), tostring(role.dynamicIsClient),
+    tostring(role.hasDedicatedServer), tostring(role.dedicatedServer),
+    tostring(role.hasDedicatedInfo), tostring(role.hasServer),
+    tostring(role.hasClient)))
+  if not isTestDedicatedMission(mission) then return end
+  self.earlyDedicatedState = {
+    mission = mission,
+    role = role,
+    productionDedicated = FS25_EnhancedVehicle.isDedicatedServerMission(mission),
+    fileAccessAllowed = lC:getFileAccessAllowed(),
+    featuresEnabled = authoritativeFeaturesEnabled(),
+    configIOCount = self.configIOCount,
+  }
+end
+
 local function runDedicatedCase(name, callback)
   emit("START", name)
   local ok, reason = xpcall(callback, function(message) return tostring(message) end)
@@ -687,10 +861,7 @@ local function runDedicatedCase(name, callback)
 end
 
 function runner:onDedicatedMissionLoaded(mission)
-  local dynamicInfo = mission ~= nil and mission.missionDynamicInfo or nil
-  local isHeadlessServer = g_dedicatedServerInfo ~= nil or
-    (dynamicInfo ~= nil and dynamicInfo.isMultiplayer == true)
-  if not isHeadlessServer or self.complete then return end
+  if not isTestDedicatedMission(mission) or self.complete then return end
   self.started = true
 
   runDedicatedCase("mission_load", function()
@@ -713,6 +884,32 @@ function runner:onDedicatedMissionLoaded(mission)
       "dedicated server allocated client sound objects")
   end)
 
+  runDedicatedCase("dedicated_config_isolation", function()
+    local early = self.earlyDedicatedState
+    requireValue(early ~= nil, "early dedicated config state was not captured")
+    requireValue(early.mission == mission, "early dedicated mission changed")
+    requireValue(early.role.hasGetIsServer and early.role.getIsServer == true,
+      "early dedicated mission was not server-capable")
+    requireValue(early.role.hasDedicatedServer and early.role.dedicatedServer ~= false,
+      "early dedicated-process flag was unavailable")
+    requireValue(early.productionDedicated,
+      "production dedicated mission classifier rejected the server")
+    requireValue(early.fileAccessAllowed == false,
+      "early dedicated config file policy was enabled")
+    requireValue(early.featuresEnabled,
+      "stale profile values disabled early authoritative defaults")
+    requireValue(early.configIOCount == 0,
+      "early dedicated config I/O was observed: " ..
+        table.concat(self.configIOEvents, ", "))
+    requireValue(lC:getFileAccessAllowed() == false,
+      "dedicated config file policy became enabled")
+    requireValue(authoritativeFeaturesEnabled(),
+      "dedicated authoritative defaults changed")
+    requireValue(self.configIOCount == 0,
+      "dedicated config I/O was observed: " ..
+        table.concat(self.configIOEvents, ", "))
+  end)
+
   runDedicatedCase("mod_teardown", function()
     requireValue(type(EV_unload) == "function", "loader unload callback is unavailable")
     EV_unload()
@@ -720,6 +917,9 @@ function runner:onDedicatedMissionLoaded(mission)
     requireValue(FS25_EnhancedVehicle.ui_hud == nil, "HUD survived unload")
     requireValue(FS25_EnhancedVehicle.ui_menu == nil, "GUI survived unload")
     requireValue(FS25_EnhancedVehicle.lineRenderer == nil, "renderer survived unload")
+    requireValue(self.configIOCount == 0,
+      "dedicated teardown config I/O was observed: " ..
+        table.concat(self.configIOEvents, ", "))
   end)
 
   self.complete = true
@@ -738,5 +938,5 @@ Mission00.loadMission00Finished = Utils.appendedFunction(
   function(mission) runner:onDedicatedMissionLoaded(mission) end)
 FS25_EnhancedVehicle.loadMap = Utils.appendedFunction(
   FS25_EnhancedVehicle.loadMap,
-  function() runner:onDedicatedMissionLoaded(g_currentMission) end)
+  function(enhancedVehicle) runner:onEnhancedVehicleLoadMap(enhancedVehicle) end)
 addModEventListener(runner)

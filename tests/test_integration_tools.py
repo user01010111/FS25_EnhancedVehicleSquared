@@ -273,14 +273,93 @@ EVTEST COMPLETE pass=1 fail=0 skip=0
             finally:
                 self.assertEqual(session.restore(), [])
 
-    def test_dedicated_runner_uses_unpaused_mission_finished_hook(self) -> None:
+    def test_dedicated_runner_splits_early_capture_from_late_checks(self) -> None:
         source = (REPOSITORY / "tests/integration/FS25_EV_TestRunner.lua").read_text(
             encoding="utf-8"
         )
         self.assertIn("Mission00.loadMission00Finished", source)
         self.assertIn("FS25_EnhancedVehicle.loadMap = Utils.appendedFunction", source)
+        self.assertIn("runner:onEnhancedVehicleLoadMap", source)
         self.assertIn('runDedicatedCase("dedicated_client_isolation"', source)
+        self.assertIn('runDedicatedCase("dedicated_config_isolation"', source)
         self.assertIn('runDedicatedCase("mod_teardown"', source)
+        self.assertIn("missionDynamicInfo", source)
+        self.assertIn("runner:onEnhancedVehicleLoadMap(enhancedVehicle)", source)
+        self.assertIn("function(mission) runner:onDedicatedMissionLoaded(mission) end", source)
+        self.assertIn("EVTEST ROLE", source)
+
+    def test_intermediate_dedicated_config_mutation_is_detected_before_restore(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            profile = root / "profile"
+            mods = profile / "mods"
+            save = profile / "savegame6"
+            settings = profile / supervisor.CONFIG_DIRECTORY
+            mods.mkdir(parents=True)
+            save.mkdir()
+            settings.mkdir(parents=True)
+            (save / "careerSavegame.xml").write_text(
+                "<careerSavegame></careerSavegame>"
+            )
+            (settings / "original.xml").write_bytes(b"original-settings")
+            original_hash = supervisor.hash_tree(settings)
+            test_zip = root / "test.zip"
+            test_zip.write_bytes(b"test")
+
+            session = supervisor.ProtectedSession(profile, mods, 6, test_zip)
+            session.backup()
+            before = session.prepare_run("dedicated")
+            self.assertEqual(
+                set(before["files"]), {supervisor.CONFIG_V0, supervisor.CONFIG_V1}
+            )
+            unchanged = session.inspect_config_transition("dedicated", before)
+            self.assertTrue(unchanged["passed"], unchanged)
+
+            current = settings / supervisor.CONFIG_V1
+            current.write_text("<mutated/>", encoding="utf-8")
+            mutated = session.inspect_config_transition("dedicated", before)
+            self.assertFalse(mutated["passed"])
+            self.assertNotEqual(
+                mutated["before"]["tree_sha256"], mutated["after"]["tree_sha256"]
+            )
+
+            self.assertEqual(session.restore(), [])
+            self.assertTrue(session.restoration_state()["passed"])
+            self.assertEqual(supervisor.hash_tree(settings), original_hash)
+
+    def test_controlled_client_fixture_requires_completed_migration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            profile = root / "profile"
+            mods = profile / "mods"
+            save = profile / "savegame6"
+            mods.mkdir(parents=True)
+            save.mkdir()
+            (save / "careerSavegame.xml").write_text(
+                "<careerSavegame></careerSavegame>"
+            )
+            test_zip = root / "test.zip"
+            test_zip.write_bytes(b"test")
+
+            session = supervisor.ProtectedSession(profile, mods, 6, test_zip)
+            session.backup()
+            before = session.prepare_run("client")
+            self.assertEqual(set(before["files"]), {supervisor.CONFIG_V0})
+            incomplete = session.inspect_config_transition("client", before)
+            self.assertFalse(incomplete["passed"])
+
+            settings = profile / supervisor.CONFIG_DIRECTORY
+            (settings / supervisor.CONFIG_V0).unlink()
+            (settings / supervisor.CONFIG_V1).write_text(
+                supervisor.controlled_config_xml(
+                    features_enabled=True, show_keys=False
+                ),
+                encoding="utf-8",
+            )
+            migrated = session.inspect_config_transition("client", before)
+            self.assertTrue(migrated["passed"], migrated)
+            self.assertEqual(session.restore(), [])
+            self.assertTrue(session.restoration_state()["passed"])
 
     def test_profile_session_restores_every_protected_path(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

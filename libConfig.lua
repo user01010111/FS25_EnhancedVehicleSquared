@@ -49,6 +49,8 @@ function libConfig:new(myName, configVersionCurrent, configVersionOld)
   self.migrationSourceFile = nil
   self.currentConfigUnreadable = false
   self.reportedWarnings = {}
+  self.fileAccessAllowed = true
+  self.fileAccessPolicySet = false
 end
 
 -- #############################################################################
@@ -62,6 +64,25 @@ end
 function libConfig:clearConfig()
   self.dataDefault = {}
   self.dataCurrent = {}
+end
+
+-- #############################################################################
+
+function libConfig:setFileAccessAllowed(allowed)
+  self.fileAccessAllowed = allowed ~= false
+  self.fileAccessPolicySet = true
+end
+
+-- #############################################################################
+
+function libConfig:getFileAccessAllowed()
+  if self.fileAccessPolicySet then
+    return self.fileAccessAllowed ~= false
+  end
+  -- Before a mission installs an explicit policy, keep the historical late
+  -- global as a defensive fallback.  A later client mission can explicitly
+  -- re-enable access even if process-global dedicated state is stale.
+  return self.fileAccessAllowed ~= false and g_dedicatedServerInfo == nil
 end
 
 -- #############################################################################
@@ -134,6 +155,9 @@ end
 -- #############################################################################
 
 function libConfig:loadConfigFile(filename, applyValues, strictValues)
+  if not self:getFileAccessAllowed() then
+    return false
+  end
   local loaded, xml = pcall(loadXMLFile, self.myName, filename)
   if not loaded or not self:isXMLHandleValid(xml) then
     return false
@@ -237,6 +261,9 @@ end
 -- #############################################################################
 
 function libConfig:discardFailedMigrationTarget()
+  if not self:getFileAccessAllowed() then
+    return
+  end
   if self.migrationSourceFile == nil or self.confFile == nil or
      self.migrationSourceFile == self.confFile then
     return
@@ -336,8 +363,7 @@ end
 function libConfig:readConfig()
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") readConfig()") end
 
-  -- skip on dedicated servers
-  if g_dedicatedServerInfo ~= nil then
+  if not self:getFileAccessAllowed() then
     return false, "disabled", false
   end
 
@@ -402,8 +428,7 @@ end
 function libConfig:writeConfig()
   if self.debug > 0 then print("-> "..myName.." ("..self.myName..") writeConfig()") end
 
-  -- skip on dedicated servers
-  if g_dedicatedServerInfo ~= nil then
+  if not self:getFileAccessAllowed() then
     return false, "disabled"
   end
 
