@@ -47,7 +47,7 @@ Third-party repackaged downloads are not supported.
   carriers
 - Consistent guidance-line rendering across anti-aliasing modes
 - Safer vehicle-physics and hydraulic hook compatibility
-- Reproducible release packaging and automated validation
+- Manifest-based release packaging and exact validated-artifact publication
 
 ## Features
 
@@ -148,15 +148,20 @@ the relevant portion of `log.txt`.
 
 ## Build and validation
 
-The release archive is generated from an explicit runtime-file manifest.
-Python 3 and Lua 5.1 are required:
+The release archive is generated from an explicit runtime-file manifest with
+fixed entry ordering, timestamps, and permissions. Python 3 and Lua 5.1 are
+required:
 
 ```sh
 scripts/validate.sh
 ```
 
 This validates the source and creates `build/FS25_EnhancedVehicle.zip`. GitHub
-Actions runs the same checks for pushes and pull requests.
+Actions runs the same checks for pushes and pull requests. DEFLATE output can
+vary between compression runtimes even when every uncompressed payload and ZIP
+metadata field is identical, so cross-toolchain byte identity is not claimed.
+For community release tags, the release asset is the exact archive validated in
+that tag's workflow run; the workflow also publishes its SHA-256 checksum.
 
 ## Attribution and license
 
