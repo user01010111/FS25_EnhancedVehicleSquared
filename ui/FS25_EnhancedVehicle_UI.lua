@@ -1,12 +1,12 @@
 --
--- Mod: FS25_EnhancedVehicle_UI
+-- Project: Enhanced Vehicle Squared (legacy-compatible UI class)
 --
--- Author: Majo76
--- email: ls (at) majo76 (dot) de
--- @Date: 02.05.2025
--- @Version: 1.1.5.0
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
+-- @Date: 17.07.2026
+-- @Version: 2.0.0.0
 
-local myName = "FS25_EnhancedVehicle_UI"
+local myName = "EnhancedVehicleSquared_UI"
 
 FS25_EnhancedVehicle_UI = {}
 local FS25_EnhancedVehicle_UI_mt = Class(FS25_EnhancedVehicle_UI, ScreenElement)
@@ -54,7 +54,7 @@ function FS25_EnhancedVehicle_UI:onOpen()
   local modName = "FS25_EnhancedVehicle"
 
   -- title
-  self.guiTitle:setText("Enhanced Vehicle ".. g_EnhancedVehicle.version .. " by Majo76")
+  self.guiTitle:setText("Enhanced Vehicle Squared " .. g_EnhancedVehicle.version)
 
   -- reset & reload config buttons
   self.resetConfigButton:setText(g_i18n.modEnvironments[modName]:getText("ui_FS25_EnhancedVehicle_resetConfigButton"))

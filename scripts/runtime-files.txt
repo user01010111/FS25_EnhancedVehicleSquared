@@ -1,12 +1,14 @@
-# Runtime files shipped in FS25_EnhancedVehicle.zip.
+# Runtime files shipped in the Enhanced Vehicle Squared compatibility ZIP.
 #
 # Paths are relative to the repository root. Prefix an entry with "?" when the
 # file belongs in the archive if present but may be absent on older branches.
 
+ATTRIBUTION.md
 FS25_EnhancedVehicle.dds
 FS25_EnhancedVehicle.lua
 FS25_EnhancedVehicle_Event.lua
 FS25_EnhancedVehicle_Loader.lua
+LICENSE
 libConfig.lua
 libUtils.lua
 modDesc.xml
@@ -20,21 +22,7 @@ resources/snap_off.ogg
 resources/snap_on.ogg
 resources/guidanceRibbon.i3d
 
-translations/translation_br.xml
-translations/translation_cs.xml
-translations/translation_cz.xml
-translations/translation_da.xml
-translations/translation_de.xml
 translations/translation_en.xml
-translations/translation_es.xml
-translations/translation_fr.xml
-translations/translation_hu.xml
-translations/translation_it.xml
-translations/translation_nl.xml
-translations/translation_pl.xml
-translations/translation_ru.xml
-translations/translation_tr.xml
-translations/translation_uk.xml
 
 ui/FS25_EnhancedVehicle_HUD.lua
 ui/FS25_EnhancedVehicle_LineRenderer.lua

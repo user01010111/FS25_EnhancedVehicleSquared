@@ -1,18 +1,16 @@
 <?xml version="1.0" encoding="utf-8" standalone="no" ?>
 <modDesc descVersion="110">
-  <author>Majo76</author>
+  <author>Enhanced Vehicle Squared contributors</author>
 
-  <version>1.1.8.0</version>
+  <version>2.0.0.0</version>
 
   <title>
-    <de>EnhancedVehicle</de>
-    <en>EnhancedVehicle</en>
+    <en>Enhanced Vehicle Squared</en>
   </title>
 
   <description>
-    <de><![CDATA[Fahrspurassistent ("GPS light"). Feststellbremse. Differentialsperren und Antriebsmodi für dein Fahrzeug. Mehr Fahrzeugsdetails im HUD.]]></de>
-    <en><![CDATA[Track assistant ("GPS light"). Parking brake. Differential locks and wheel drive modes for your vehicle. Shows more vehicle details on HUD.]]></en>
-	</description>
+    <en><![CDATA[Independent continuation with track guidance ("GPS light"), parking brake, differential locks, wheel-drive modes, grouped implement controls, and an expanded vehicle HUD.]]></en>
+  </description>
 
   <iconFilename>FS25_EnhancedVehicle.dds</iconFilename>
 
@@ -20,6 +18,8 @@
 
   <l10n filenamePrefix="translations/translation"/>
 
+  <!-- These action IDs are retained as a compatibility interface so existing
+       Farming Simulator profiles keep their custom key bindings. -->
   <actions>
     <action name="FS25_EnhancedVehicle_MENU"            />
     <action name="FS25_EnhancedVehicle_PARK"            />

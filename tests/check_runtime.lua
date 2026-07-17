@@ -127,11 +127,22 @@ assertEqual(canonical.trackOriginX, 100, "out-of-map origin rejection")
 assertNear(canonical.trackDirectionX, math.sqrt(0.5), 0.000001, "normalized direction X")
 assertNear(canonical.trackDirectionZ, math.sqrt(0.5), 0.000001, "normalized direction Z")
 assertEqual(canonical.trackWorkWidth, 100, "work-width clamp")
-assertEqual(canonical.trackOffset, 50, "offset clamp")
+assertEqual(canonical.trackOffset, -1, "offset wrapping")
 assertEqual(canonical.trackDelta, 5, "turnover clamp")
 assertEqual(canonical.opMode, 2, "operation-mode clamp")
 assertEqual(canonical.headlandMode, 3, "headland-mode clamp")
 assertEqual(canonical.headlandDistance, 10, "unsupported headland distance rejection")
+
+local wrappingRequest = FS25_EnhancedVehicle.buildNetworkSnapshot(vehicle, false)
+wrappingRequest.trackWorkWidth = 6
+wrappingRequest.trackOffset = 2.99 + 0.05
+local wrapped = FS25_EnhancedVehicle.sanitizeNetworkSnapshot(vehicle, wrappingRequest, true)
+assertNear(wrapped.trackOffset, -2.96, 0.000001, "positive offset increment wraps")
+wrappingRequest.trackOffset = -2.99 - 0.05
+wrapped = FS25_EnhancedVehicle.sanitizeNetworkSnapshot(vehicle, wrappingRequest, true)
+assertNear(wrapped.trackOffset, 2.96, 0.000001, "negative offset increment wraps")
+assertEqual(FS25_EnhancedVehicle.wrapTrackOffset(3, 6, 0), 3, "positive half-width endpoint")
+assertEqual(FS25_EnhancedVehicle.wrapTrackOffset(-3, 6, 0), -3, "negative half-width endpoint")
 
 request.tripReset = true
 canonical = FS25_EnhancedVehicle.sanitizeNetworkSnapshot(vehicle, request, true)
@@ -259,6 +270,155 @@ second.spec_turnOnVehicle.isTurnedOn = false
 FS25_EnhancedVehicle.setHydraulicGroupTurnedOn(hydraulicVehicle, { first, second }, "test")
 assertEqual(first.spec_turnOnVehicle.isTurnedOn, false, "unpowered group first target")
 assertEqual(second.spec_turnOnVehicle.isTurnedOn, false, "unpowered group second target")
+
+-- Group folding follows the stock Foldable toggle, guard, and move-to-middle
+-- contract independently for every implement.
+local function foldable(turnOnDirection, toggleDirection, allowed, warning)
+  local object = {
+    spec_foldable = {
+      hasFoldingParts = true,
+      foldingParts = { {} },
+      turnOnFoldDirection = turnOnDirection,
+      foldMoveDirection = 0
+    },
+    guardCalls = {},
+    foldCalls = {}
+  }
+  function object:getToggledFoldDirection()
+    return toggleDirection
+  end
+  function object:getIsFoldAllowed(direction, onAiTurnOn)
+    self.guardCalls[#self.guardCalls + 1] = { direction, onAiTurnOn }
+    return allowed, warning
+  end
+  function object:setFoldState(direction, moveToMiddle)
+    self.foldCalls[#self.foldCalls + 1] = { direction, moveToMiddle }
+  end
+  return object
+end
+
+local warningCalls = {}
+function g_currentMission:showBlinkingWarning(warning, duration)
+  warningCalls[#warningCalls + 1] = { warning, duration }
+end
+
+local foldNegative = foldable(-1, -1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ foldNegative }, "front")
+assertEqual(foldNegative.guardCalls[1][1], -1, "negative orientation guard direction")
+assertEqual(foldNegative.guardCalls[1][2], false, "negative orientation AI guard")
+assertEqual(foldNegative.foldCalls[1][1], -1, "negative orientation fold direction")
+assertEqual(foldNegative.foldCalls[1][2], true, "negative orientation move to middle")
+
+local foldPositive = foldable(1, 1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ foldPositive }, "rear")
+assertEqual(foldPositive.foldCalls[1][1], 1, "positive orientation fold direction")
+assertEqual(foldPositive.foldCalls[1][2], true, "positive orientation move to middle")
+
+local foldEndpoint = foldable(1, -1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ foldEndpoint }, "rear")
+assertEqual(foldEndpoint.foldCalls[1][2], false, "opposite direction move to endpoint")
+
+local reversing = foldable(1, -1, true)
+reversing.spec_foldable.foldMoveDirection = 1
+FS25_EnhancedVehicle.foldHydraulicGroup({ reversing }, "front")
+assertEqual(reversing.foldCalls[1][1], -1, "active folding reversal")
+
+local blocked = foldable(-1, 1, false)
+FS25_EnhancedVehicle.foldHydraulicGroup({ blocked }, "front")
+assertEqual(#blocked.guardCalls, 1, "blocked fold guard call")
+assertEqual(#blocked.foldCalls, 0, "blocked fold mutation")
+
+local warningOne = foldable(-1, 1, false, "fold blocked")
+local warningTwo = foldable(1, -1, false, "fold blocked")
+FS25_EnhancedVehicle.foldHydraulicGroup({ warningOne, warningTwo }, "front")
+assertEqual(#warningCalls, 1, "deduplicated fold warning")
+assertEqual(warningCalls[1][1], "fold blocked", "fold warning text")
+assertEqual(warningCalls[1][2], 2000, "fold warning duration")
+
+local mixedNegative = foldable(-1, -1, true)
+local mixedPositive = foldable(1, 1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ mixedNegative, mixedPositive }, "front")
+assertEqual(mixedNegative.foldCalls[1][2], true, "mixed negative move to middle")
+assertEqual(mixedPositive.foldCalls[1][2], true, "mixed positive move to middle")
+
+local frontOnly = foldable(-1, 1, true)
+local rearOnly = foldable(1, -1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ frontOnly }, "front")
+assertEqual(#frontOnly.foldCalls, 1, "front group folded front implement")
+assertEqual(#rearOnly.foldCalls, 0, "front group excluded rear implement")
+FS25_EnhancedVehicle.foldHydraulicGroup({ rearOnly }, "rear")
+assertEqual(#frontOnly.foldCalls, 1, "rear group excluded front implement")
+assertEqual(#rearOnly.foldCalls, 1, "rear group folded rear implement")
+
+FS25_EnhancedVehicle.foldHydraulicGroup({
+  {},
+  { spec_foldable = {} },
+  { spec_foldable = { hasFoldingParts = true, foldingParts = { {} } } }
+}, "partial")
+
+-- Headland scanning resolves the FS25 grass mapping and deliberately keeps
+-- cut grass distinct from uncut grass.
+FieldGroundType = {
+  GRASS = "grass",
+  GRASS_CUT = "grassCut",
+  getValueByType = function(groundType)
+    if groundType == "grass" then return 14 end
+    if groundType == "grassCut" then return 15 end
+  end
+}
+FieldDensityMap = { GROUND_TYPE = "groundType" }
+function bitShiftRight(value, channels) return math.floor(value / 2^channels) end
+function bitAND(value, mask) return value % (mask + 1) end
+function getTerrainHeightAtWorldPos() return 0 end
+
+g_currentMission.grassValue = nil
+g_currentMission.terrainRootNode = {}
+g_currentMission.fieldGroundSystem = {
+  getDensityMapData = function() return 1, 4, 4 end
+}
+
+local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
+local cutGrassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS_CUT)
+assertEqual(grassValue, 14, "nontrivial grass mapping")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(0, grassValue), false, "zero density ground")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(grassValue, grassValue), false, "grass ground")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(cutGrassValue, grassValue), true, "cut grass ground")
+assertEqual(FS25_EnhancedVehicle.isHeadlandFieldGround(7, grassValue), true, "ordinary field ground")
+
+local headlandVehicle = {
+  vData = {
+    px = 0,
+    pz = 0,
+    dirX = 1,
+    dirZ = 0,
+    track = { headlandDistance = 1, workWidth = 6 }
+  }
+}
+local sampledGroundType = grassValue
+function getDensityAtWorldPos()
+  return sampledGroundType * 2^4
+end
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), false, "headland info grass boundary")
+sampledGroundType = cutGrassValue
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), true, "headland info cut grass")
+sampledGroundType = 7
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), true, "headland info ordinary field")
+sampledGroundType = 0
+assertEqual(FS25_EnhancedVehicle:getHeadlandInfo(headlandVehicle), false, "headland info zero density")
+
+function getDensityAtWorldPos(_, x)
+  local densityType = x >= 2.5 and grassValue or cutGrassValue
+  return densityType * 2^4
+end
+FS25_EnhancedVehicle:getHeadlandDistance(headlandVehicle)
+assertNear(headlandVehicle.vData.track.eofDistance, 1.5, 0.000001,
+  "headland distance grass termination")
+
+function getDensityAtWorldPos()
+  return cutGrassValue * 2^4
+end
+FS25_EnhancedVehicle:getHeadlandDistance(headlandVehicle)
+assertEqual(headlandVehicle.vData.track.eofDistance, -1, "headland distance cut grass policy")
 
 -- Parking brake changes are specialization-scoped and flow through superFunc.
 local physicsVehicle = {

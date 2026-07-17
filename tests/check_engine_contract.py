@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Optionally validate EnhancedVehicle's APIs against an installed FS25 SDK."""
+"""Validate Enhanced Vehicle Squared APIs against the installed FS25 game."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import zipfile
 VEHICLE_LOADING = "dataS/scripts/vehicles/VehicleLoadingData.lua"
 REVERSE_DRIVING = "dataS/scripts/vehicles/specializations/ReverseDriving.lua"
 SETTINGS_MODEL = "dataS/scripts/gui/base/SettingsModel.lua"
+INGAME_MAP = "dataS/scripts/gui/hud/ingameMap/IngameMap.lua"
 
 REQUIRED_ZIP_TOKENS = {
     VEHICLE_LOADING: (
@@ -33,6 +34,10 @@ REQUIRED_ZIP_TOKENS = {
         "getSupportsPostProcessAntiAliasing",
         "setMSAA",
         "setDLSSQuality",
+    ),
+    INGAME_MAP: (
+        "missionDynamicInfo.isMultiplayer",
+        "missionDynamicInfo.isClient",
     ),
 }
 
@@ -104,11 +109,33 @@ def main() -> int:
     for function_name in (
         "createPlaneShapeFrom2DContour",
         "createTransformGroup",
+        "createXMLFile",
+        "delete",
         "getMaterial",
+        "hasXMLProperty",
+        "loadXMLFile",
+        "saveXMLFile",
         "setMaterial",
     ):
         if f'<function name="{function_name}"' not in binding_text:
             print(f"engine contract: {function_name} binding is unavailable", file=sys.stderr)
+            return 1
+    for contract_text in (
+        'desc="xmlId (0 if failed to load)"',
+        '<param name="success" type="boolean" desc="success"/>',
+    ):
+        if contract_text not in binding_text:
+            print(f"engine contract: XML persistence contract is missing {contract_text!r}", file=sys.stderr)
+            return 1
+
+    game_executable = source.parents[2] / "x64" / "FarmingSimulator2025Game.exe"
+    if not game_executable.is_file():
+        print("engine contract: FarmingSimulator2025Game.exe is unavailable", file=sys.stderr)
+        return 1
+    executable_symbols = game_executable.read_bytes()
+    for function_name in ("createFolder", "deleteFile", "fileExists"):
+        if function_name.encode("ascii") not in executable_symbols:
+            print(f"engine contract: {function_name} engine symbol is unavailable", file=sys.stderr)
             return 1
 
     print(f"Validated installed FS25 engine contracts in {source}")

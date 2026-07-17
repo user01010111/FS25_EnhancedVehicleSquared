@@ -1,13 +1,20 @@
 --
--- Mod: FS25_EnhancedVehicle
+-- Project: Enhanced Vehicle Squared
 --
--- Author: Majo76
--- email: ls (at) majo76 (dot) de
--- @Date: 15.07.2026
--- @Version: 1.1.8.0
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
+-- @Date: 17.07.2026
+-- @Version: 2.0.0.0
 
 --[[
 CHANGELOG
+
+2026-07-17 - V2.0.0.0
+* renamed the independently maintained project to Enhanced Vehicle Squared
+* hardened transactional licensed-test cleanup and validated release packaging
+* corrected guidance offset wrapping, grouped folding, and grass boundaries
+* made configuration migration deterministic and isolated dedicated servers
+* changed project and release text to English only
 
 2026-07-15 - V1.1.8.0
 * FS25 1.20 compatibility and dedicated-server lifecycle hardening
@@ -71,7 +78,7 @@ CHANGELOG
 license: https://creativecommons.org/licenses/by-nc-sa/4.0/
 ]]--
 
-local myName = "FS25_EnhancedVehicle"
+local myName = "EnhancedVehicleSquared"
 
 FS25_EnhancedVehicle = {}
 local FS25_EnhancedVehicle_mt = Class(FS25_EnhancedVehicle)
@@ -218,7 +225,8 @@ function FS25_EnhancedVehicle:onMissionLoaded(mission)
   if debug > 1 then print("-> " .. myName .. ": onMissionLoaded ") end
 
   -- Dedicated servers do not construct the client HUD/GUI objects.
-  if g_dedicatedServerInfo ~= nil or mission == nil or mission.hud == nil or
+  if FS25_EnhancedVehicle.isDedicatedServerMission(mission) or
+     mission == nil or mission.hud == nil or
      mission.hud.speedMeter == nil or mission.hud.gameInfoDisplay == nil or g_gui == nil then
     return
   end
@@ -269,15 +277,43 @@ end
 
 -- #############################################################################
 
+function FS25_EnhancedVehicle.isDedicatedServerMission(mission)
+  local isDedicatedProcess = g_dedicatedServer ~= nil and g_dedicatedServer ~= false
+  if mission ~= nil and type(mission.getIsServer) == "function" and
+     type(mission.getIsClient) == "function" then
+    local isServer = mission:getIsServer() == true
+    local isClient = mission:getIsClient() == true
+    -- FS25's -server launch keeps getIsClient() true during Mission00.load,
+    -- but exposes g_dedicatedServer before g_dedicatedServerInfo exists.
+    -- Requiring server authority prevents stale process state from disabling a
+    -- later ordinary client mission. Hosted and single-player missions have no
+    -- dedicated-process flag and therefore retain normal config behavior.
+    return isServer and (not isClient or isDedicatedProcess)
+  end
+
+  -- These are fallbacks only when the mission capability pair is unavailable.
+  return isDedicatedProcess or g_dedicatedServerInfo ~= nil
+end
+
+-- #############################################################################
+
 function FS25_EnhancedVehicle:loadMap()
-  print("--> loaded FS25_EnhancedVehicle version " .. self.version .. " (by Majo76) <--");
+  print("--> loaded Enhanced Vehicle Squared version " .. self.version .. " <--");
+
+  local mission = self.mission or g_currentMission
+  lC:setFileAccessAllowed(not FS25_EnhancedVehicle.isDedicatedServerMission(mission))
 
   -- first set our current and default config to default values
   FS25_EnhancedVehicle:resetConfig()
-  -- then read values from disk and "overwrite" current config
-  lC:readConfig()
-  -- then write current config (which is now a merge between default values and from disk)
-  lC:writeConfig()
+  if lC:getFileAccessAllowed() then
+    -- then read values from disk and "overwrite" current config
+    local _, _, shouldWriteConfig = lC:readConfig()
+    -- Write the merged defaults/current values or complete a verified legacy
+    -- migration.  Unreadable files are retained for manual recovery.
+    if shouldWriteConfig then
+      lC:writeConfig()
+    end
+  end
   -- and finally activate current config
   FS25_EnhancedVehicle:activateConfig()
 end
@@ -285,7 +321,7 @@ end
 -- #############################################################################
 
 function FS25_EnhancedVehicle:unloadMap()
-  print("--> unloaded FS25_EnhancedVehicle version " .. self.version .. " (by Majo76) <--");
+  print("--> unloaded Enhanced Vehicle Squared version " .. self.version .. " <--");
 end
 
 -- #############################################################################
@@ -296,7 +332,7 @@ function FS25_EnhancedVehicle.installSpecializations(vehicleTypeManager, special
   specializationManager:addSpecialization("EnhancedVehicle", "FS25_EnhancedVehicle", Utils.getFilename("FS25_EnhancedVehicle.lua", modDirectory), nil)
 
   if specializationManager:getSpecializationByName("EnhancedVehicle") == nil then
-    print("ERROR: unable to add specialization 'FS25_EnhancedVehicle'")
+    print("ERROR: Enhanced Vehicle Squared could not add legacy specialization 'FS25_EnhancedVehicle'")
   else
     for typeName, typeDef in pairs(vehicleTypeManager.types) do
       if SpecializationUtil.hasSpecialization(Drivable,  typeDef.specializations) and
@@ -706,13 +742,13 @@ end
 function FS25_EnhancedVehicle:saveToXMLFile(xmlFile, key)
   if debug > 1 then print("-> " .. myName .. ": saveToXMLFile" .. mySelf(self)) end
 
-  if self.vData.is[1] ~= nil then  setXMLBool(xmlFile.handle,  key.."#frontDiffIsOn",    self.vData.is[1])  else print("-> EV: saveToXMLFile warning [1]")  end
-  if self.vData.is[2] ~= nil then  setXMLBool(xmlFile.handle,  key.."#backDiffIsOn",     self.vData.is[2])  else print("-> EV: saveToXMLFile warning [2]")  end
-  if self.vData.is[3] ~= nil then  setXMLInt(xmlFile.handle,   key.."#driveMode",        self.vData.is[3])  else print("-> EV: saveToXMLFile warning [3]")  end
-  if self.vData.is[13] ~= nil then setXMLBool(xmlFile.handle,  key.."#parkingBrakeIsOn", self.vData.is[13]) else print("-> EV: saveToXMLFile warning [13]") end
-  if self.vData.is[14] ~= nil then setXMLFloat(xmlFile.handle, key.."#odoMeter",         self.vData.is[14]) else print("-> EV: saveToXMLFile warning [14]") end
-  if self.vData.is[15] ~= nil then setXMLFloat(xmlFile.handle, key.."#tripMeter",        self.vData.is[15]) else print("-> EV: saveToXMLFile warning [15]") end
-  if self.vData.is[16] ~= nil then setXMLInt(xmlFile.handle,   key.."#odoMode",          self.vData.is[16]) else print("-> EV: saveToXMLFile warning [16]") end
+  if self.vData.is[1] ~= nil then  setXMLBool(xmlFile.handle,  key.."#frontDiffIsOn",    self.vData.is[1])  else print("-> EVS: saveToXMLFile warning [1]")  end
+  if self.vData.is[2] ~= nil then  setXMLBool(xmlFile.handle,  key.."#backDiffIsOn",     self.vData.is[2])  else print("-> EVS: saveToXMLFile warning [2]")  end
+  if self.vData.is[3] ~= nil then  setXMLInt(xmlFile.handle,   key.."#driveMode",        self.vData.is[3])  else print("-> EVS: saveToXMLFile warning [3]")  end
+  if self.vData.is[13] ~= nil then setXMLBool(xmlFile.handle,  key.."#parkingBrakeIsOn", self.vData.is[13]) else print("-> EVS: saveToXMLFile warning [13]") end
+  if self.vData.is[14] ~= nil then setXMLFloat(xmlFile.handle, key.."#odoMeter",         self.vData.is[14]) else print("-> EVS: saveToXMLFile warning [14]") end
+  if self.vData.is[15] ~= nil then setXMLFloat(xmlFile.handle, key.."#tripMeter",        self.vData.is[15]) else print("-> EVS: saveToXMLFile warning [15]") end
+  if self.vData.is[16] ~= nil then setXMLInt(xmlFile.handle,   key.."#odoMode",          self.vData.is[16]) else print("-> EVS: saveToXMLFile warning [16]") end
 end
 
 -- #############################################################################
@@ -731,6 +767,24 @@ local function clampNetworkNumber(value, fallback, minValue, maxValue)
     value = minValue
   end
   return math.max(minValue, math.min(maxValue, value))
+end
+
+function FS25_EnhancedVehicle.wrapTrackOffset(offset, workWidth, fallback)
+  if not isFiniteNumber(workWidth) or workWidth <= 0 then
+    return 0
+  end
+  if not isFiniteNumber(offset) or math.abs(offset) > 100000 then
+    offset = fallback
+  end
+  if not isFiniteNumber(offset) or math.abs(offset) > 100000 then
+    offset = 0
+  end
+
+  local halfWidth = workWidth * 0.5
+  if offset < -halfWidth or offset > halfWidth then
+    offset = (offset + halfWidth) % workWidth - halfWidth
+  end
+  return offset
 end
 
 local function copyNetworkValues(values)
@@ -845,7 +899,7 @@ function FS25_EnhancedVehicle.sanitizeNetworkSnapshot(vehicle, incoming, fromCli
   local snapX = positionValue(incoming.trackSnapX, current.trackSnapX or vehicleX)
   local snapZ = positionValue(incoming.trackSnapZ, current.trackSnapZ or vehicleZ)
   local workWidth = clampNetworkNumber(incoming.trackWorkWidth, current.trackWorkWidth, 0.1, 100)
-  local offset = clampNetworkNumber(incoming.trackOffset, current.trackOffset, -workWidth * 0.5, workWidth * 0.5)
+  local offset = FS25_EnhancedVehicle.wrapTrackOffset(incoming.trackOffset, workWidth, current.trackOffset)
   local trackDelta = math.floor(clampNetworkNumber(incoming.trackDelta, current.trackDelta, -5, 5) + 0.5)
   local headlandMode = math.floor(clampNetworkNumber(incoming.headlandMode, current.headlandMode, 1, 3) + 0.5)
 
@@ -1995,6 +2049,36 @@ function FS25_EnhancedVehicle.setHydraulicGroupTurnedOn(vehicle, implements, lab
   end
 end
 
+function FS25_EnhancedVehicle.foldHydraulicGroup(implements, label)
+  local warningToDisplay = nil
+
+  for _, object in pairs(implements) do
+    local spec = object.spec_foldable
+    if spec ~= nil and spec.hasFoldingParts == true and
+       type(object.getToggledFoldDirection) == "function" and
+       type(object.getIsFoldAllowed) == "function" and
+       type(object.setFoldState) == "function" then
+      local direction = object:getToggledFoldDirection()
+      local allowed, warning = object:getIsFoldAllowed(direction, false)
+      if allowed then
+        local moveToMiddle = direction == spec.turnOnFoldDirection
+        object:setFoldState(direction, moveToMiddle)
+        if debug > 1 then
+          print("--> " .. label .. " fold: " .. tostring(object.rootNode) .. "/" ..
+                tostring(direction) .. "/" .. tostring(moveToMiddle))
+        end
+      elseif warningToDisplay == nil and warning ~= nil then
+        warningToDisplay = warning
+      end
+    end
+  end
+
+  if warningToDisplay ~= nil and g_currentMission ~= nil and
+     type(g_currentMission.showBlinkingWarning) == "function" then
+    g_currentMission:showBlinkingWarning(warningToDisplay, 2000)
+  end
+end
+
 -- #############################################################################
 
 function FS25_EnhancedVehicle:onActionCall(actionName, keyStatus, arg4, arg5, arg6)
@@ -2138,45 +2222,11 @@ function FS25_EnhancedVehicle:onActionCall(actionName, keyStatus, arg4, arg5, ar
   elseif FS25_EnhancedVehicle.functionHydraulicIsEnabled and actionName == "FS25_EnhancedVehicle_AJ_FRONT_FOLD" then
     -- front hydraulic fold/unfold
     FS25_EnhancedVehicle:enumerateAttachments(self)
-
-    for _, object in pairs(implements_front) do
-      -- can it be folded?
-      if object.spec_foldable ~= nil then
-        if object.spec_foldable.isFoldAllowed then
-          local _newDirection = 0
-          if object.spec_foldable.foldMoveDirection == 0 then
-            -- if its not folding right now -> check if its lowered
-            _newDirection = object.spec_foldable:getIsUnfolded() and 1 or -1
-          else
-            -- if its folding right now -> reverse
-            _newDirection = object.spec_foldable.foldMoveDirection * -1
-          end
-          object.spec_foldable:setFoldState(_newDirection, false)
-          if debug > 1 then print("--> front fold: "..object.rootNode.."/"..tostring(_newDirection)) end
-        end
-      end
-    end
+    FS25_EnhancedVehicle.foldHydraulicGroup(implements_front, "front")
   elseif FS25_EnhancedVehicle.functionHydraulicIsEnabled and actionName == "FS25_EnhancedVehicle_AJ_REAR_FOLD" then
     -- rear hydraulic fold/unfold
     FS25_EnhancedVehicle:enumerateAttachments(self)
-
-    for _, object in pairs(implements_back) do
-      -- can it be folded?
-      if object.spec_foldable ~= nil then
-        if object.spec_foldable.isFoldAllowed then
-          local _newDirection = 0
-          if object.spec_foldable.foldMoveDirection == 0 then
-            -- if its not folding right now -> check if its lowered
-            _newDirection = object.spec_foldable:getIsUnfolded() and 1 or -1
-          else
-            -- if its folding right now -> reverse
-            _newDirection = object.spec_foldable.foldMoveDirection * -1
-          end
-          object.spec_foldable:setFoldState(_newDirection, false)
-          if debug > 1 then print("--> rear fold: "..object.rootNode.."/"..tostring(_newDirection)) end
-        end
-      end
-    end
+    FS25_EnhancedVehicle.foldHydraulicGroup(implements_back, "rear")
   elseif FS25_EnhancedVehicle.functionParkingBrakeIsEnabled and actionName == "FS25_EnhancedVehicle_PARK" then
     -- parking brake on/off
     if self.vData.is[13] and FS25_EnhancedVehicle.sounds["brakeOff"] ~= nil and FS25_EnhancedVehicle.soundIsOn and g_dedicatedServerInfo == nil then
@@ -2433,6 +2483,12 @@ end
 
 -- #############################################################################
 
+function FS25_EnhancedVehicle.isHeadlandFieldGround(densityType, grassValue)
+  return densityType ~= 0 and densityType ~= grassValue
+end
+
+-- #############################################################################
+
 function FS25_EnhancedVehicle:getHeadlandInfo(self)
   local distance = self.vData.track.headlandDistance
   if distance == 9999 and self.vData.track.workWidth ~= nil then
@@ -2448,7 +2504,8 @@ function FS25_EnhancedVehicle:getHeadlandInfo(self)
   local groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels = g_currentMission.fieldGroundSystem:getDensityMapData(FieldDensityMap.GROUND_TYPE)
   local _density = getDensityAtWorldPos(groundTypeMapId, x, y, z)
   local _densityType = bitAND(bitShiftRight(_density, groundTypeFirstChannel), 2^groundTypeNumChannels - 1)
-  isOnField = isOnField and (_densityType ~= g_currentMission.grassValue and _densityType ~= 0)
+  local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
+  isOnField = isOnField and FS25_EnhancedVehicle.isHeadlandFieldGround(_densityType, grassValue)
 
   -- for debugging
 --  self.vData.hlx = x
@@ -2471,7 +2528,8 @@ function FS25_EnhancedVehicle:getHeadlandDistance(self)
   local _z = z
 
   local y
-  local groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels
+  local groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels = g_currentMission.fieldGroundSystem:getDensityMapData(FieldDensityMap.GROUND_TYPE)
+  local grassValue = FieldGroundType.getValueByType(FieldGroundType.GRASS)
   local _density, _densityType
 
   local isOnField = true
@@ -2480,10 +2538,9 @@ function FS25_EnhancedVehicle:getHeadlandDistance(self)
 
   while(_dist < 100) do
     y = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, x, 1, z)
-    groundTypeMapId, groundTypeFirstChannel, groundTypeNumChannels = g_currentMission.fieldGroundSystem:getDensityMapData(FieldDensityMap.GROUND_TYPE)
     _density = getDensityAtWorldPos(groundTypeMapId, x, y, z)
     _densityType = bitAND(bitShiftRight(_density, groundTypeFirstChannel), 2^groundTypeNumChannels - 1)
-    isOnField = isOnField and (_densityType ~= g_currentMission.grassValue and _densityType ~= 0)
+    isOnField = isOnField and FS25_EnhancedVehicle.isHeadlandFieldGround(_densityType, grassValue)
 
     if not isOnField then
       self.vData.track.eofDistance = MathUtil.vector2Length(_x - x, _z - z)
@@ -2543,9 +2600,6 @@ function FS25_EnhancedVehicle:updateTrack(self, updateAngle, updateAngleValue, u
       self.vData.track.offset = 0
     end
   end
-
-  if self.vData.track.offset < (-self.vData.track.workWidth / 2) then self.vData.track.offset = self.vData.track.offset + (self.vData.track.workWidth) end
-  if self.vData.track.offset > ( self.vData.track.workWidth / 2) then self.vData.track.offset = self.vData.track.offset - (self.vData.track.workWidth) end
 
   local _broadcastUpdate = false
 
@@ -2613,6 +2667,11 @@ function FS25_EnhancedVehicle:updateTrack(self, updateAngle, updateAngleValue, u
     self.vData.track.workWidth = Between(self.vData.track.workWidth + deltaWorkWidth, 0.1, 100)
     updateSnap = true
   end
+
+  -- Keep a manual offset on the equivalent pass after either the offset or
+  -- work width changes, before calculating and broadcasting the snap point.
+  self.vData.track.offset = FS25_EnhancedVehicle.wrapTrackOffset(
+    self.vData.track.offset, self.vData.track.workWidth, 0)
 
   -- shall we update the snap position?
   if updateSnap then

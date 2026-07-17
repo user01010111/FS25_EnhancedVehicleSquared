@@ -1,12 +1,12 @@
 --
--- Mod: FS25_EnhancedVehicle_HUD
+-- Project: Enhanced Vehicle Squared (legacy-compatible HUD class)
 --
--- Author: Majo76
--- email: ls (at) majo76 (dot) de
--- @Date: 15.07.2026
--- @Version: 1.1.8.0
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
+-- @Date: 17.07.2026
+-- @Version: 2.0.0.0
 
-local myName = "FS25_EnhancedVehicle_HUD"
+local myName = "EnhancedVehicleSquared_HUD"
 
 FS25_EnhancedVehicle_HUD = {}
 local FS25_EnhancedVehicle_HUD_mt = Class(FS25_EnhancedVehicle_HUD, HUDDisplayElement)

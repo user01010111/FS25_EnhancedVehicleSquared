@@ -1,0 +1,71 @@
+name: Bug report
+description: Report a reproducible Enhanced Vehicle Squared problem
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please use clear English and remove credentials or private profile data from logs.
+  - type: input
+    id: squared_version
+    attributes:
+      label: Enhanced Vehicle Squared version
+      placeholder: 2.0.0.0
+    validations:
+      required: true
+  - type: input
+    id: game_version
+    attributes:
+      label: Farming Simulator 25 version
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game mode
+      options:
+        - Single player
+        - Hosted multiplayer
+        - Dedicated server
+        - Multiplayer client
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Explain the observed result and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Load ...
+        2. Enter ...
+        3. Press ...
+    validations:
+      required: true
+  - type: textarea
+    id: other_mods
+    attributes:
+      label: Other active mods
+      description: List likely interacting mods or state that the test used only Squared.
+  - type: textarea
+    id: log
+    attributes:
+      label: Relevant log excerpt
+      description: Paste only the relevant English log lines; do not upload a complete user profile.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I replaced the old ZIP and did not install both versions side by side.
+          required: true
+        - label: I searched existing issues for the same problem.
+          required: true

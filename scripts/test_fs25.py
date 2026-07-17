@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the licensed local FS25 integration suite with transactional cleanup."""
+"""Run licensed Enhanced Vehicle Squared acceptance with transactional cleanup."""
 
 from __future__ import annotations
 
@@ -9,8 +9,9 @@ from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
+import math
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shlex
 import shutil
@@ -30,10 +31,23 @@ GAME_PROCESS_MARKERS = (
     "farmingsimulator2025game.exe",
     "dedicatedserver.exe",
 )
-MARKER = re.compile(r"EVTEST (START|PASS|FAIL|SKIP|CAPTURE|COMPLETE)\s+([^\r\n]+)")
-CAPTURE_VALUE = re.compile(r"([a-z0-9]+)=(-?[0-9]+(?:\.[0-9]+)?)")
+MARKER = re.compile(r"EVTEST (START|PASS|FAIL|SKIP|CAPTURE|COMPLETE)(?:\s+([^\r\n]*))?")
+CAPTURE_VALUE = re.compile(
+    r"([a-z0-9]+)=([^\s]+)"
+)
+COMPLETE_COUNTS = re.compile(r"pass=(\d+) fail=(\d+) skip=(\d+)")
 MOD_LINE = re.compile(
     r'^\s*<mod\b[^>]*\bmodName="FS25_EnhancedVehicle"[^>]*/>\s*$', re.MULTILINE
+)
+CONFIG_DIRECTORY = "modSettings/FS25_EnhancedVehicle"
+CONFIG_V0 = "FS25_EnhancedVehicle_v0.xml"
+CONFIG_V1 = "FS25_EnhancedVehicle_v1.xml"
+FEATURE_FLAGS = (
+    "diffIsEnabled",
+    "hydraulicIsEnabled",
+    "snapIsEnabled",
+    "parkingBrakeIsEnabled",
+    "odoMeterIsEnabled",
 )
 
 
@@ -83,6 +97,7 @@ class ScenarioResult:
     log_issues: list[str] = field(default_factory=list)
     elapsed_seconds: float = 0.0
     log_path: str = ""
+    config_evidence: dict[str, object] = field(default_factory=dict)
 
     @property
     def passed(self) -> bool:
@@ -107,14 +122,40 @@ def hash_tree(root: Path) -> str:
     if not root.exists():
         digest.update(b"<missing>")
         return digest.hexdigest()
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+    for path in sorted(root.rglob("*")):
         relative = path.relative_to(root).as_posix().encode("utf-8")
         digest.update(len(relative).to_bytes(4, "big"))
         digest.update(relative)
-        with path.open("rb") as stream:
-            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(chunk)
+        if path.is_symlink():
+            digest.update(b"L")
+            digest.update(os.readlink(path).encode("utf-8", errors="surrogateescape"))
+        elif path.is_dir():
+            digest.update(b"D")
+        elif path.is_file():
+            digest.update(b"F")
+            with path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+        else:
+            digest.update(b"O")
     return digest.hexdigest()
+
+
+def controlled_config_xml(*, features_enabled: bool, show_keys: bool) -> str:
+    feature_value = str(features_enabled).lower()
+    show_keys_value = str(show_keys).lower()
+    attributes = " ".join(
+        f'{name}="{feature_value}"' for name in FEATURE_FLAGS
+    )
+    return (
+        '<?xml version="1.0" encoding="utf-8" standalone="no"?>\n'
+        "<FS25_EnhancedVehicle>\n"
+        "  <global>\n"
+        f"    <functions {attributes}/>\n"
+        f'    <misc showKeysInHelpMenu="{show_keys_value}" soundIsOn="true"/>\n'
+        "  </global>\n"
+        "</FS25_EnhancedVehicle>\n"
+    )
 
 
 def discover_game_dir(explicit: Path | None) -> Path:
@@ -366,7 +407,7 @@ def active_case(content: str) -> str | None:
     active: str | None = None
     for match in MARKER.finditer(content):
         kind, payload = match.groups()
-        name = payload.partition(" ")[0]
+        name = (payload or "").partition(" ")[0]
         if kind == "START":
             active = name
         elif kind in ("PASS", "FAIL", "SKIP") and name == active:
@@ -394,8 +435,8 @@ def ensure_mod_enabled(career_save: Path) -> None:
     has_bom = raw.startswith(b"\xef\xbb\xbf")
     text = raw.decode("utf-8-sig")
     replacement = (
-        '    <mod modName="FS25_EnhancedVehicle" title="EnhancedVehicle" '
-        'version="1.1.8.0" required="false"/>'
+        '    <mod modName="FS25_EnhancedVehicle" title="Enhanced Vehicle Squared" '
+        'version="2.0.0.0" required="false"/>'
     )
     if MOD_LINE.search(text):
         text = MOD_LINE.sub(replacement, text)
@@ -426,15 +467,19 @@ class ProtectedSession:
         "EVTEST.status",
         "serverProcessId.dat",
     )
-    PROTECTED_TREES = ("shader_cache", "dedicated_server")
+    PROTECTED_TREES = (
+        "shader_cache",
+        "dedicated_server",
+        CONFIG_DIRECTORY,
+    )
 
     def __init__(self, profile: Path, mods_dir: Path, savegame_id: int, test_zip: Path):
-        self.profile = profile
-        self.mods_dir = mods_dir
+        self.profile = profile.resolve()
+        self.mods_dir = mods_dir.resolve()
         self.savegame_id = savegame_id
-        self.save_dir = profile / f"savegame{savegame_id}"
-        self.target_mod = mods_dir / MOD_FILENAME
-        self.test_zip = test_zip
+        self.save_dir = self._protected_path(self.profile, f"savegame{savegame_id}")
+        self.target_mod = self._protected_path(self.mods_dir, MOD_FILENAME)
+        self.test_zip = test_zip.resolve()
         self.temp = Path(tempfile.mkdtemp(prefix="FS25_EV_TestSession."))
         self.backup_save = self.temp / "savegame"
         self.backup_mod = self.temp / MOD_FILENAME
@@ -447,6 +492,186 @@ class ProtectedSession:
         self.engine_logs_before: set[str] = set()
         self.original_trees: dict[str, str | None] = {}
         self._prepared = False
+
+    @staticmethod
+    def _protected_path(root: Path, relative_name: str) -> Path:
+        relative = PurePosixPath(relative_name)
+        if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+            raise IntegrationError(f"unsafe protected relative path: {relative_name!r}")
+        root = root.resolve()
+        target = root.joinpath(*relative.parts)
+        try:
+            target.resolve(strict=False).relative_to(root)
+        except ValueError as error:
+            raise IntegrationError(
+                f"protected path escapes its root: {relative_name!r}"
+            ) from error
+        return target
+
+    @staticmethod
+    def _replace_path(source: Path, destination: Path) -> None:
+        source.replace(destination)
+
+    @staticmethod
+    def _remove_path(path: Path) -> None:
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _copy_tree(source: Path, destination: Path) -> None:
+        shutil.copytree(source, destination, copy_function=shutil.copy2)
+
+    @staticmethod
+    def _copy_file(source: Path, destination: Path) -> None:
+        shutil.copy2(source, destination)
+
+    def _staging_root(self, target: Path) -> Path:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return Path(
+            tempfile.mkdtemp(prefix=f".{target.name}.EVTestRestore.", dir=target.parent)
+        ).resolve()
+
+    def _restore_present_target(
+        self,
+        target: Path,
+        backup: Path,
+        expected_hash: str,
+        *,
+        tree: bool,
+    ) -> list[str]:
+        """Stage, verify, swap, and verify one protected target.
+
+        The previous live target is kept in the staging directory until the
+        replacement has passed final verification, allowing a failed swap or
+        verification to roll back without leaving the live path missing.
+        """
+        problems: list[str] = []
+        try:
+            stage_root = self._staging_root(target)
+        except OSError as error:
+            return [f"could not create restoration staging path for {target}: {error}"]
+        replacement = stage_root / "replacement"
+        previous = stage_root / "previous"
+        hash_target = hash_tree if tree else sha256
+        moved_previous = False
+        installed_replacement = False
+        retain_stage = False
+        try:
+            if tree:
+                self._copy_tree(backup, replacement)
+            else:
+                self._copy_file(backup, replacement)
+            if hash_target(replacement) != expected_hash:
+                raise OSError("staged replacement failed hash verification")
+
+            if target.exists() or target.is_symlink():
+                self._replace_path(target, previous)
+                moved_previous = True
+            try:
+                self._replace_path(replacement, target)
+                installed_replacement = True
+            except OSError:
+                if moved_previous and not target.exists():
+                    try:
+                        self._replace_path(previous, target)
+                        moved_previous = False
+                    except OSError:
+                        # A second atomic rename may be unavailable after an
+                        # injected or filesystem failure.  Copy the quarantined
+                        # live value back as a last best-effort guard against a
+                        # missing path, and retain all recovery material if it
+                        # cannot be verified.
+                        try:
+                            if tree:
+                                self._copy_tree(previous, target)
+                            else:
+                                self._copy_file(previous, target)
+                            if hash_target(previous) != hash_target(target):
+                                retain_stage = True
+                        except OSError:
+                            retain_stage = True
+                raise
+
+            if hash_target(target) != expected_hash:
+                raise OSError("restored target failed final hash verification")
+
+            if moved_previous:
+                self._remove_path(previous)
+                moved_previous = False
+        except OSError as error:
+            problems.append(f"could not restore {target}: {error}")
+            if installed_replacement and moved_previous:
+                failed = stage_root / "failed-replacement"
+                try:
+                    self._replace_path(target, failed)
+                    installed_replacement = False
+                    self._replace_path(previous, target)
+                    moved_previous = False
+                except OSError as rollback_error:
+                    problems.append(f"could not roll back {target}: {rollback_error}")
+                    retain_stage = True
+                    if previous.exists() and not target.exists():
+                        try:
+                            if tree:
+                                self._copy_tree(previous, target)
+                            else:
+                                self._copy_file(previous, target)
+                            if hash_target(previous) != hash_target(target):
+                                problems.append(
+                                    f"copied rollback for {target} failed verification"
+                                )
+                        except OSError as copy_error:
+                            problems.append(
+                                f"could not copy quarantined value back to {target}: {copy_error}"
+                            )
+            if not target.exists():
+                problems.append(f"protected path is missing after cleanup failure: {target}")
+                retain_stage = True
+        finally:
+            if retain_stage:
+                problems.append(f"retained swap recovery data at {stage_root}")
+            else:
+                try:
+                    self._remove_path(stage_root)
+                except OSError as error:
+                    problems.append(f"could not remove restoration staging path {stage_root}: {error}")
+        return problems
+
+    def _restore_absent_target(self, target: Path) -> list[str]:
+        """Remove only a test-created protected target, with quarantine."""
+        if not target.exists() and not target.is_symlink():
+            return []
+        problems: list[str] = []
+        try:
+            stage_root = self._staging_root(target)
+        except OSError as error:
+            return [f"could not create restoration staging path for {target}: {error}"]
+        previous = stage_root / "test-created"
+        retain_stage = False
+        try:
+            self._replace_path(target, previous)
+            if target.exists() or target.is_symlink():
+                raise OSError("target remained present after quarantine")
+            self._remove_path(previous)
+        except OSError as error:
+            problems.append(f"could not remove test-created path {target}: {error}")
+            if previous.exists() and not target.exists():
+                try:
+                    self._replace_path(previous, target)
+                except OSError as rollback_error:
+                    problems.append(f"could not roll back {target}: {rollback_error}")
+                    retain_stage = True
+        finally:
+            if retain_stage:
+                problems.append(f"retained swap recovery data at {stage_root}")
+            else:
+                try:
+                    self._remove_path(stage_root)
+                except OSError as error:
+                    problems.append(f"could not remove restoration staging path {stage_root}: {error}")
+        return problems
 
     @property
     def screenshots_dir(self) -> Path:
@@ -471,6 +696,85 @@ class ProtectedSession:
         ]
         return sorted(paths, key=lambda path: (path.stat().st_mtime_ns, path.name))
 
+    @property
+    def config_directory(self) -> Path:
+        return self._protected_path(self.profile, CONFIG_DIRECTORY)
+
+    def install_controlled_config(self, mode: str) -> None:
+        target = self.config_directory
+        if target.exists() or target.is_symlink():
+            self._remove_path(target)
+        target.mkdir(parents=True)
+        if mode == "dedicated":
+            content = controlled_config_xml(features_enabled=False, show_keys=False)
+            (target / CONFIG_V0).write_text(content, encoding="utf-8")
+            (target / CONFIG_V1).write_text(content, encoding="utf-8")
+        elif mode == "client":
+            (target / CONFIG_V0).write_text(
+                controlled_config_xml(features_enabled=True, show_keys=False),
+                encoding="utf-8",
+            )
+        else:
+            raise IntegrationError(f"unsupported controlled config mode: {mode}")
+
+    def config_state(self) -> dict[str, object]:
+        target = self.config_directory
+        files: dict[str, dict[str, object]] = {}
+        if target.is_dir():
+            for path in sorted(target.rglob("*")):
+                if path.is_file():
+                    files[path.relative_to(target).as_posix()] = {
+                        "sha256": sha256(path),
+                        "size": path.stat().st_size,
+                    }
+        return {
+            "exists": target.is_dir(),
+            "tree_sha256": hash_tree(target),
+            "files": files,
+        }
+
+    def inspect_config_transition(
+        self, mode: str, before: dict[str, object]
+    ) -> dict[str, object]:
+        after = self.config_state()
+        issues: list[str] = []
+        if mode == "dedicated":
+            if after != before:
+                issues.append(
+                    "dedicated Enhanced Vehicle Squared config changed before restoration"
+                )
+        elif mode == "client":
+            old_file = self.config_directory / CONFIG_V0
+            current_file = self.config_directory / CONFIG_V1
+            if old_file.exists():
+                issues.append("client legacy config was not retired")
+            if not current_file.is_file():
+                issues.append("client current config was not created")
+            else:
+                try:
+                    root = ET.parse(current_file).getroot()
+                    if root.tag != "FS25_EnhancedVehicle":
+                        issues.append("client current config has the wrong root")
+                    functions = root.find("./global/functions")
+                    misc = root.find("./global/misc")
+                    if functions is None or any(
+                        functions.get(name) != "true" for name in FEATURE_FLAGS
+                    ):
+                        issues.append("client feature flags were not preserved")
+                    if misc is None or misc.get("showKeysInHelpMenu") != "false":
+                        issues.append("client controlled config value was not preserved")
+                except (OSError, ET.ParseError) as error:
+                    issues.append(f"client current config is unreadable: {error}")
+        else:
+            issues.append(f"unsupported config evidence mode: {mode}")
+        return {
+            "mode": mode,
+            "passed": not issues,
+            "issues": issues,
+            "before": before,
+            "after": after,
+        }
+
     def remove_new_engine_logs(self) -> None:
         for path in self.new_engine_logs():
             path.unlink(missing_ok=True)
@@ -485,30 +789,41 @@ class ProtectedSession:
             )
         self.original_save_hash = hash_tree(self.save_dir)
         shutil.copytree(self.save_dir, self.backup_save, copy_function=shutil.copy2)
+        if hash_tree(self.backup_save) != self.original_save_hash:
+            raise IntegrationError("selected savegame backup failed hash verification")
         self.file_backups.mkdir(parents=True)
         self.tree_backups.mkdir(parents=True)
         for name in self.PROTECTED_FILES:
-            path = self.profile / name
+            path = self._protected_path(self.profile, name)
+            backup = self._protected_path(self.file_backups, name)
             if path.is_file():
                 self.original_files[name] = sha256(path)
-                shutil.copy2(path, self.file_backups / name)
+                shutil.copy2(path, backup)
+                if sha256(backup) != self.original_files[name]:
+                    raise IntegrationError(f"profile file backup failed verification: {name}")
             else:
                 self.original_files[name] = None
         for name in self.PROTECTED_TREES:
-            path = self.profile / name
+            path = self._protected_path(self.profile, name)
+            backup = self._protected_path(self.tree_backups, name)
             if path.is_dir():
                 self.original_trees[name] = hash_tree(path)
-                shutil.copytree(path, self.tree_backups / name, copy_function=shutil.copy2)
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(path, backup, copy_function=shutil.copy2)
+                if hash_tree(backup) != self.original_trees[name]:
+                    raise IntegrationError(f"profile tree backup failed verification: {name}")
             else:
                 self.original_trees[name] = None
         if self.target_mod.is_file():
             self.original_mod_hash = sha256(self.target_mod)
             shutil.copy2(self.target_mod, self.backup_mod)
+            if sha256(self.backup_mod) != self.original_mod_hash:
+                raise IntegrationError("production mod ZIP backup failed hash verification")
         self.screenshots_before = self.screenshot_inventory()
         self.engine_logs_before = self.engine_log_inventory()
         self._prepared = True
 
-    def prepare_run(self, mode: str = "client") -> None:
+    def prepare_run(self, mode: str = "client") -> dict[str, object]:
         if not self._prepared:
             raise IntegrationError("profile backup has not completed")
         if self.save_dir.exists():
@@ -522,11 +837,13 @@ class ProtectedSession:
             else:
                 shutil.copy2(backup, path)
         for name, expected in self.original_trees.items():
-            path = self.profile / name
+            path = self._protected_path(self.profile, name)
             if path.exists():
                 shutil.rmtree(path)
             if expected is not None:
-                shutil.copytree(self.tree_backups / name, path, copy_function=shutil.copy2)
+                backup = self._protected_path(self.tree_backups, name)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(backup, path, copy_function=shutil.copy2)
         self.mods_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(self.test_zip, self.target_mod)
         ensure_mod_enabled(self.save_dir / "careerSavegame.xml")
@@ -541,7 +858,7 @@ class ProtectedSession:
                 "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n"
                 "<gameserver>\n"
                 "  <settings>\n"
-                "    <game_name>EnhancedVehicle automated test</game_name>\n"
+                "    <game_name>Enhanced Vehicle Squared automated test</game_name>\n"
                 "    <admin_password>EVTestAdminOnly</admin_password>\n"
                 "    <game_password></game_password>\n"
                 f"    <savegame_index>{self.savegame_id}</savegame_index>\n"
@@ -559,6 +876,8 @@ class ProtectedSession:
                 "</gameserver>\n",
                 encoding="utf-8",
             )
+        self.install_controlled_config(mode)
+        return self.config_state()
 
     def new_screenshots(self) -> list[Path]:
         names = self.screenshot_inventory() - self.screenshots_before
@@ -569,58 +888,145 @@ class ProtectedSession:
         for name in self.screenshot_inventory() - self.screenshots_before:
             (self.screenshots_dir / name).unlink(missing_ok=True)
 
+    def restoration_state(self) -> dict[str, object]:
+        try:
+            restored_save_hash = hash_tree(self.save_dir)
+            restored_mod_hash = (
+                sha256(self.target_mod) if self.target_mod.is_file() else None
+            )
+            restored_files = {
+                name: sha256(path) if path.is_file() else None
+                for name in self.original_files
+                for path in (self._protected_path(self.profile, name),)
+            }
+            restored_trees = {
+                name: hash_tree(path) if path.is_dir() else None
+                for name in self.original_trees
+                for path in (self._protected_path(self.profile, name),)
+            }
+        except OSError as error:
+            return {"passed": False, "error": str(error)}
+        return {
+            "passed": restored_save_hash == self.original_save_hash
+            and restored_mod_hash == self.original_mod_hash
+            and restored_files == self.original_files
+            and restored_trees == self.original_trees,
+            "savegame": {
+                "original": self.original_save_hash,
+                "restored": restored_save_hash,
+            },
+            "production_mod": {
+                "original": self.original_mod_hash,
+                "restored": restored_mod_hash,
+            },
+            "profile_files": {
+                "original": self.original_files,
+                "restored": restored_files,
+            },
+            "profile_trees": {
+                "original": self.original_trees,
+                "restored": restored_trees,
+            },
+        }
+
     def restore(self) -> list[str]:
         problems: list[str] = []
         if not self._prepared:
             shutil.rmtree(self.temp, ignore_errors=True)
             return problems
-        try:
-            if self.save_dir.exists():
-                shutil.rmtree(self.save_dir)
-            shutil.copytree(self.backup_save, self.save_dir, copy_function=shutil.copy2)
-            for name, expected in self.original_files.items():
-                path = self.profile / name
-                backup = self.file_backups / name
-                if expected is None:
-                    path.unlink(missing_ok=True)
-                else:
-                    shutil.copy2(backup, path)
-            for name, expected in self.original_trees.items():
-                path = self.profile / name
-                if path.exists():
-                    shutil.rmtree(path)
-                if expected is not None:
-                    shutil.copytree(self.tree_backups / name, path, copy_function=shutil.copy2)
-            if self.original_mod_hash is None:
-                self.target_mod.unlink(missing_ok=True)
+        problems.extend(
+            self._restore_present_target(
+                self.save_dir,
+                self.backup_save,
+                self.original_save_hash,
+                tree=True,
+            )
+        )
+        for name, expected in self.original_files.items():
+            path = self._protected_path(self.profile, name)
+            backup = self._protected_path(self.file_backups, name)
+            if expected is None:
+                problems.extend(self._restore_absent_target(path))
             else:
-                shutil.copy2(self.backup_mod, self.target_mod)
-            self.remove_new_screenshots()
-            self.remove_new_engine_logs()
+                problems.extend(
+                    self._restore_present_target(path, backup, expected, tree=False)
+                )
+        for name, expected in self.original_trees.items():
+            path = self._protected_path(self.profile, name)
+            backup = self._protected_path(self.tree_backups, name)
+            if expected is None:
+                problems.extend(self._restore_absent_target(path))
+            else:
+                problems.extend(
+                    self._restore_present_target(path, backup, expected, tree=True)
+                )
+        if self.original_mod_hash is None:
+            problems.extend(self._restore_absent_target(self.target_mod))
+        else:
+            problems.extend(
+                self._restore_present_target(
+                    self.target_mod,
+                    self.backup_mod,
+                    self.original_mod_hash,
+                    tree=False,
+                )
+            )
 
+        try:
+            self.remove_new_screenshots()
+        except OSError as error:
+            problems.append(f"could not remove test screenshots: {error}")
+        try:
+            self.remove_new_engine_logs()
+        except OSError as error:
+            problems.append(f"could not remove dedicated-server logs: {error}")
+
+        try:
             if hash_tree(self.save_dir) != self.original_save_hash:
                 problems.append("selected savegame was not restored byte-for-byte")
-            for name, expected in self.original_files.items():
-                path = self.profile / name
+        except OSError as error:
+            problems.append(f"could not verify selected savegame {self.save_dir}: {error}")
+        for name, expected in self.original_files.items():
+            path = self._protected_path(self.profile, name)
+            try:
                 actual = sha256(path) if path.is_file() else None
-                if actual != expected:
-                    problems.append(f"profile file was not restored: {name}")
-            for name, expected in self.original_trees.items():
-                path = self.profile / name
+            except OSError as error:
+                problems.append(f"could not verify profile file {path}: {error}")
+                continue
+            if actual != expected:
+                problems.append(f"profile file was not restored: {path}")
+        for name, expected in self.original_trees.items():
+            path = self._protected_path(self.profile, name)
+            try:
                 actual = hash_tree(path) if path.is_dir() else None
-                if actual != expected:
-                    problems.append(f"profile tree was not restored: {name}")
+            except OSError as error:
+                problems.append(f"could not verify profile tree {path}: {error}")
+                continue
+            if actual != expected:
+                problems.append(f"profile tree was not restored: {path}")
+        try:
             actual_mod = sha256(self.target_mod) if self.target_mod.is_file() else None
-            if actual_mod != self.original_mod_hash:
-                problems.append("installed production mod ZIP was not restored")
+        except OSError as error:
+            actual_mod = None
+            problems.append(f"could not verify production mod ZIP {self.target_mod}: {error}")
+        if actual_mod != self.original_mod_hash:
+            problems.append(f"installed production mod ZIP was not restored: {self.target_mod}")
+        try:
             if self.screenshot_inventory() != self.screenshots_before:
                 problems.append("test screenshots were not fully removed")
+        except OSError as error:
+            problems.append(f"could not verify screenshot cleanup: {error}")
+        try:
             if self.engine_log_inventory() != self.engine_logs_before:
                 problems.append("dedicated-server logs were not fully removed")
         except OSError as error:
-            problems.append(f"cleanup failed: {error}")
-        finally:
+            problems.append(f"could not verify dedicated-server log cleanup: {error}")
+
+        if problems:
+            problems.append(f"recovery backup retained at {self.temp.resolve()}")
+        else:
             shutil.rmtree(self.temp, ignore_errors=True)
+            self._prepared = False
         return problems
 
 
@@ -628,25 +1034,101 @@ def parse_log(mode: str, content: str) -> tuple[list[CaseResult], list[CaptureRe
     cases: dict[str, CaseResult] = {}
     order: list[str] = []
     captures: list[CaptureRequest] = []
-    complete = False
+    protocol_errors: list[str] = []
+    active: str | None = None
+    complete_count = 0
+    started_count = 0
+    observed_counts = {"pass": 0, "fail": 0, "skip": 0}
+
+    def protocol_error(message: str) -> None:
+        protocol_errors.append(message)
+
     for match in MARKER.finditer(content):
-        kind, payload = match.groups()
+        kind, raw_payload = match.groups()
+        payload = (raw_payload or "").strip()
+        if complete_count:
+            protocol_error(f"{kind} marker appeared after COMPLETE")
         if kind == "COMPLETE":
-            complete = True
+            complete_count += 1
+            if complete_count > 1:
+                protocol_error("COMPLETE appeared more than once")
+            count_match = COMPLETE_COUNTS.fullmatch(payload)
+            if count_match is None:
+                protocol_error(f"COMPLETE has malformed counts: {payload!r}")
+            else:
+                declared = dict(
+                    zip(("pass", "fail", "skip"), map(int, count_match.groups()))
+                )
+                if declared != observed_counts:
+                    protocol_error(
+                        "COMPLETE counts do not match observed terminals: "
+                        f"declared={declared}, observed={observed_counts}"
+                    )
+            if active is not None:
+                protocol_error(f"COMPLETE appeared while case {active!r} was active")
             continue
         name, _, details = payload.partition(" ")
+        if not name:
+            protocol_error(f"{kind} marker has no case name")
+            continue
         if kind == "START":
-            if name not in cases:
-                order.append(name)
+            if name in cases:
+                protocol_error(f"case {name!r} has more than one START")
+                continue
+            if active is not None:
+                protocol_error(f"case {name!r} started while {active!r} was active")
+            order.append(name)
             cases[name] = CaseResult(name, "running")
+            active = name
+            started_count += 1
         elif kind in ("PASS", "FAIL", "SKIP"):
             if name not in cases:
                 order.append(name)
-            cases[name] = CaseResult(name, kind.lower(), details)
+                cases[name] = CaseResult(
+                    name, "fail", f"{kind} terminal marker appeared without START"
+                )
+                protocol_error(f"case {name!r} has a terminal marker without START")
+                observed_counts[kind.lower()] += 1
+            elif cases[name].status != "running":
+                protocol_error(f"case {name!r} has more than one terminal result")
+            else:
+                cases[name] = CaseResult(name, kind.lower(), details)
+                observed_counts[kind.lower()] += 1
+            if active != name:
+                protocol_error(f"terminal marker for {name!r} was not the active case")
+            elif cases[name].status != "running":
+                active = None
         elif kind == "CAPTURE":
-            values = {key: float(value) for key, value in CAPTURE_VALUE.findall(details)}
             required = {"r", "g", "b", "x1", "y1", "x2", "y2"}
-            if required <= values.keys():
+            pairs: list[tuple[str, str]] = []
+            malformed = False
+            for token in details.split():
+                value_match = CAPTURE_VALUE.fullmatch(token)
+                if value_match is None:
+                    malformed = True
+                else:
+                    pairs.append(value_match.groups())
+            keys = [key for key, _ in pairs]
+            values: dict[str, float] = {}
+            malformed = malformed or set(keys) != required or len(keys) != len(required)
+            if not malformed:
+                try:
+                    values = {key: float(value) for key, value in pairs}
+                except ValueError:
+                    malformed = True
+                else:
+                    malformed = not all(math.isfinite(value) for value in values.values())
+            # Client graphics cases intentionally use case names such as
+            # aa_taa and capture labels such as taa.  Those are the only
+            # documented distinct case/capture names emitted by the runner.
+            associated = active == name or active == f"aa_{name}"
+            if active is None or not associated:
+                protocol_error(
+                    f"CAPTURE {name!r} is not associated with the active case {active!r}"
+                )
+            if malformed:
+                protocol_error(f"CAPTURE {name!r} has malformed or non-finite fields")
+            elif associated:
                 captures.append(
                     CaptureRequest(
                         name,
@@ -662,11 +1144,21 @@ def parse_log(mode: str, content: str) -> tuple[list[CaseResult], list[CaptureRe
     for name in order:
         if cases[name].status == "running":
             cases[name] = CaseResult(name, "fail", "test process ended before the case completed")
-    if not complete:
-        cases[f"{mode}_completion"] = CaseResult(
-            f"{mode}_completion", "fail", "EVTEST COMPLETE marker was not observed"
+            protocol_error(f"case {name!r} did not emit a terminal result")
+    if started_count == 0:
+        protocol_error("no test cases were executed")
+    if complete_count != 1:
+        protocol_error(
+            "EVTEST COMPLETE marker was not observed"
+            if complete_count == 0
+            else "EVTEST COMPLETE marker count was invalid"
         )
-        order.append(f"{mode}_completion")
+    if protocol_errors:
+        for index, reason in enumerate(protocol_errors, start=1):
+            name = f"{mode}_protocol_{index}"
+            order.append(name)
+            cases[name] = CaseResult(name, "fail", reason)
+    complete = complete_count == 1 and not protocol_errors
     return [cases[name] for name in order], captures, complete
 
 
@@ -1006,7 +1498,7 @@ def run_scenario(
 
 
 def write_junit(path: Path, scenarios: list[ScenarioResult], cleanup: list[str]) -> None:
-    suite = ET.Element("testsuite", name="FS25 EnhancedVehicle integration")
+    suite = ET.Element("testsuite", name="FS25 Enhanced Vehicle Squared integration")
     failures = 0
     skipped = 0
     count = 0
@@ -1109,6 +1601,7 @@ def main() -> int:
     artifacts.mkdir(parents=True, exist_ok=True)
     scenarios: list[ScenarioResult] = []
     cleanup_problems: list[str] = []
+    restoration_evidence: dict[str, object] = {}
 
     try:
         game_dir = discover_game_dir(args.game_dir)
@@ -1130,7 +1623,7 @@ def main() -> int:
                 cwd=REPOSITORY,
                 check=True,
             )
-            modes = [args.mode] if args.mode != "all" else ["client", "dedicated"]
+            modes = [args.mode] if args.mode != "all" else ["dedicated", "client"]
             if "client" in modes and importlib.util.find_spec("PIL") is None:
                 raise IntegrationError(
                     "Pillow is required for screenshot metrics; install it with "
@@ -1161,7 +1654,7 @@ def main() -> int:
             try:
                 session.backup()
                 for mode in modes:
-                    session.prepare_run(mode)
+                    config_before = session.prepare_run(mode)
                     result = run_scenario(
                         mode,
                         commands[mode],
@@ -1173,9 +1666,30 @@ def main() -> int:
                         args.case_timeout,
                         game_dir,
                     )
+                    config_evidence = session.inspect_config_transition(
+                        mode, config_before
+                    )
+                    (artifacts / f"{mode}-config-state.json").write_text(
+                        json.dumps(config_evidence, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    result.config_evidence = config_evidence
+                    result.log_issues.extend(
+                        f"config evidence: {issue}"
+                        for issue in config_evidence["issues"]
+                    )
                     scenarios.append(result)
             finally:
                 cleanup_problems = session.restore()
+                restoration_evidence = session.restoration_state()
+                if restoration_evidence.get("passed") is not True:
+                    cleanup_problems.append(
+                        "restoration evidence did not verify all protected hashes"
+                    )
+                (artifacts / "restoration-state.json").write_text(
+                    json.dumps(restoration_evidence, indent=2) + "\n",
+                    encoding="utf-8",
+                )
     except (IntegrationError, OSError, subprocess.CalledProcessError) as error:
         cleanup_problems.append(str(error))
 
@@ -1184,9 +1698,12 @@ def main() -> int:
         "passed": bool(scenarios)
         and all(scenario.passed for scenario in scenarios)
         and not cleanup_problems,
+        "restoration_passed": restoration_evidence.get("passed") is True,
         "scenarios": [asdict(scenario) | {"passed": scenario.passed} for scenario in scenarios],
         "cleanup_problems": cleanup_problems,
+        "restoration": restoration_evidence,
     }
+    report["passed"] = report["passed"] and report["restoration_passed"]
     (artifacts / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     write_junit(artifacts / "junit.xml", scenarios, cleanup_problems)
     print_results(scenarios, cleanup_problems)

@@ -1,10 +1,10 @@
 --
--- Mod: FS25_EnhancedVehicle_Loader
+-- Project: Enhanced Vehicle Squared (legacy-compatible loader)
 --
--- Author: Majo76
--- email: ls (at) majo76 (dot) de
--- @Date: 15.07.2026
--- @Version: 1.1.8.0
+-- Maintained by Enhanced Vehicle Squared contributors.
+-- Derived from Enhanced Vehicle; see ATTRIBUTION.md and LICENSE.
+-- @Date: 17.07.2026
+-- @Version: 2.0.0.0
 
 -- #############################################################################
 

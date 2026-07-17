@@ -35,11 +35,13 @@ fi
 "$lua_runtime" tests/check_runtime.lua
 "$lua_compiler" -p tests/check_client_runtime.lua
 "$lua_runtime" tests/check_client_runtime.lua
+"$lua_compiler" -p tests/check_config.lua
+"$lua_runtime" tests/check_config.lua
 
 python3 tests/check_release.py
 python3 tests/check_contracts.py
 python3 tests/check_engine_contract.py
-python3 -m unittest tests.test_integration_tools
+python3 -m unittest tests.test_integration_tools tests.test_release_archive
 python3 scripts/package.py
 python3 tests/check_release.py --archive build/FS25_EnhancedVehicle.zip
 
