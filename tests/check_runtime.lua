@@ -271,6 +271,91 @@ FS25_EnhancedVehicle.setHydraulicGroupTurnedOn(hydraulicVehicle, { first, second
 assertEqual(first.spec_turnOnVehicle.isTurnedOn, false, "unpowered group first target")
 assertEqual(second.spec_turnOnVehicle.isTurnedOn, false, "unpowered group second target")
 
+-- Group folding follows the stock Foldable toggle, guard, and move-to-middle
+-- contract independently for every implement.
+local function foldable(turnOnDirection, toggleDirection, allowed, warning)
+  local object = {
+    spec_foldable = {
+      hasFoldingParts = true,
+      foldingParts = { {} },
+      turnOnFoldDirection = turnOnDirection,
+      foldMoveDirection = 0
+    },
+    guardCalls = {},
+    foldCalls = {}
+  }
+  function object:getToggledFoldDirection()
+    return toggleDirection
+  end
+  function object:getIsFoldAllowed(direction, onAiTurnOn)
+    self.guardCalls[#self.guardCalls + 1] = { direction, onAiTurnOn }
+    return allowed, warning
+  end
+  function object:setFoldState(direction, moveToMiddle)
+    self.foldCalls[#self.foldCalls + 1] = { direction, moveToMiddle }
+  end
+  return object
+end
+
+local warningCalls = {}
+function g_currentMission:showBlinkingWarning(warning, duration)
+  warningCalls[#warningCalls + 1] = { warning, duration }
+end
+
+local foldNegative = foldable(-1, -1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ foldNegative }, "front")
+assertEqual(foldNegative.guardCalls[1][1], -1, "negative orientation guard direction")
+assertEqual(foldNegative.guardCalls[1][2], false, "negative orientation AI guard")
+assertEqual(foldNegative.foldCalls[1][1], -1, "negative orientation fold direction")
+assertEqual(foldNegative.foldCalls[1][2], true, "negative orientation move to middle")
+
+local foldPositive = foldable(1, 1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ foldPositive }, "rear")
+assertEqual(foldPositive.foldCalls[1][1], 1, "positive orientation fold direction")
+assertEqual(foldPositive.foldCalls[1][2], true, "positive orientation move to middle")
+
+local foldEndpoint = foldable(1, -1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ foldEndpoint }, "rear")
+assertEqual(foldEndpoint.foldCalls[1][2], false, "opposite direction move to endpoint")
+
+local reversing = foldable(1, -1, true)
+reversing.spec_foldable.foldMoveDirection = 1
+FS25_EnhancedVehicle.foldHydraulicGroup({ reversing }, "front")
+assertEqual(reversing.foldCalls[1][1], -1, "active folding reversal")
+
+local blocked = foldable(-1, 1, false)
+FS25_EnhancedVehicle.foldHydraulicGroup({ blocked }, "front")
+assertEqual(#blocked.guardCalls, 1, "blocked fold guard call")
+assertEqual(#blocked.foldCalls, 0, "blocked fold mutation")
+
+local warningOne = foldable(-1, 1, false, "fold blocked")
+local warningTwo = foldable(1, -1, false, "fold blocked")
+FS25_EnhancedVehicle.foldHydraulicGroup({ warningOne, warningTwo }, "front")
+assertEqual(#warningCalls, 1, "deduplicated fold warning")
+assertEqual(warningCalls[1][1], "fold blocked", "fold warning text")
+assertEqual(warningCalls[1][2], 2000, "fold warning duration")
+
+local mixedNegative = foldable(-1, -1, true)
+local mixedPositive = foldable(1, 1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ mixedNegative, mixedPositive }, "front")
+assertEqual(mixedNegative.foldCalls[1][2], true, "mixed negative move to middle")
+assertEqual(mixedPositive.foldCalls[1][2], true, "mixed positive move to middle")
+
+local frontOnly = foldable(-1, 1, true)
+local rearOnly = foldable(1, -1, true)
+FS25_EnhancedVehicle.foldHydraulicGroup({ frontOnly }, "front")
+assertEqual(#frontOnly.foldCalls, 1, "front group folded front implement")
+assertEqual(#rearOnly.foldCalls, 0, "front group excluded rear implement")
+FS25_EnhancedVehicle.foldHydraulicGroup({ rearOnly }, "rear")
+assertEqual(#frontOnly.foldCalls, 1, "rear group excluded front implement")
+assertEqual(#rearOnly.foldCalls, 1, "rear group folded rear implement")
+
+FS25_EnhancedVehicle.foldHydraulicGroup({
+  {},
+  { spec_foldable = {} },
+  { spec_foldable = { hasFoldingParts = true, foldingParts = { {} } } }
+}, "partial")
+
 -- Parking brake changes are specialization-scoped and flow through superFunc.
 local physicsVehicle = {
   vData = { is = { [5] = false, [13] = true } },

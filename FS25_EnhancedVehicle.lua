@@ -2013,6 +2013,36 @@ function FS25_EnhancedVehicle.setHydraulicGroupTurnedOn(vehicle, implements, lab
   end
 end
 
+function FS25_EnhancedVehicle.foldHydraulicGroup(implements, label)
+  local warningToDisplay = nil
+
+  for _, object in pairs(implements) do
+    local spec = object.spec_foldable
+    if spec ~= nil and spec.hasFoldingParts == true and
+       type(object.getToggledFoldDirection) == "function" and
+       type(object.getIsFoldAllowed) == "function" and
+       type(object.setFoldState) == "function" then
+      local direction = object:getToggledFoldDirection()
+      local allowed, warning = object:getIsFoldAllowed(direction, false)
+      if allowed then
+        local moveToMiddle = direction == spec.turnOnFoldDirection
+        object:setFoldState(direction, moveToMiddle)
+        if debug > 1 then
+          print("--> " .. label .. " fold: " .. tostring(object.rootNode) .. "/" ..
+                tostring(direction) .. "/" .. tostring(moveToMiddle))
+        end
+      elseif warningToDisplay == nil and warning ~= nil then
+        warningToDisplay = warning
+      end
+    end
+  end
+
+  if warningToDisplay ~= nil and g_currentMission ~= nil and
+     type(g_currentMission.showBlinkingWarning) == "function" then
+    g_currentMission:showBlinkingWarning(warningToDisplay, 2000)
+  end
+end
+
 -- #############################################################################
 
 function FS25_EnhancedVehicle:onActionCall(actionName, keyStatus, arg4, arg5, arg6)
@@ -2156,45 +2186,11 @@ function FS25_EnhancedVehicle:onActionCall(actionName, keyStatus, arg4, arg5, ar
   elseif FS25_EnhancedVehicle.functionHydraulicIsEnabled and actionName == "FS25_EnhancedVehicle_AJ_FRONT_FOLD" then
     -- front hydraulic fold/unfold
     FS25_EnhancedVehicle:enumerateAttachments(self)
-
-    for _, object in pairs(implements_front) do
-      -- can it be folded?
-      if object.spec_foldable ~= nil then
-        if object.spec_foldable.isFoldAllowed then
-          local _newDirection = 0
-          if object.spec_foldable.foldMoveDirection == 0 then
-            -- if its not folding right now -> check if its lowered
-            _newDirection = object.spec_foldable:getIsUnfolded() and 1 or -1
-          else
-            -- if its folding right now -> reverse
-            _newDirection = object.spec_foldable.foldMoveDirection * -1
-          end
-          object.spec_foldable:setFoldState(_newDirection, false)
-          if debug > 1 then print("--> front fold: "..object.rootNode.."/"..tostring(_newDirection)) end
-        end
-      end
-    end
+    FS25_EnhancedVehicle.foldHydraulicGroup(implements_front, "front")
   elseif FS25_EnhancedVehicle.functionHydraulicIsEnabled and actionName == "FS25_EnhancedVehicle_AJ_REAR_FOLD" then
     -- rear hydraulic fold/unfold
     FS25_EnhancedVehicle:enumerateAttachments(self)
-
-    for _, object in pairs(implements_back) do
-      -- can it be folded?
-      if object.spec_foldable ~= nil then
-        if object.spec_foldable.isFoldAllowed then
-          local _newDirection = 0
-          if object.spec_foldable.foldMoveDirection == 0 then
-            -- if its not folding right now -> check if its lowered
-            _newDirection = object.spec_foldable:getIsUnfolded() and 1 or -1
-          else
-            -- if its folding right now -> reverse
-            _newDirection = object.spec_foldable.foldMoveDirection * -1
-          end
-          object.spec_foldable:setFoldState(_newDirection, false)
-          if debug > 1 then print("--> rear fold: "..object.rootNode.."/"..tostring(_newDirection)) end
-        end
-      end
-    end
+    FS25_EnhancedVehicle.foldHydraulicGroup(implements_back, "rear")
   elseif FS25_EnhancedVehicle.functionParkingBrakeIsEnabled and actionName == "FS25_EnhancedVehicle_PARK" then
     -- parking brake on/off
     if self.vData.is[13] and FS25_EnhancedVehicle.sounds["brakeOff"] ~= nil and FS25_EnhancedVehicle.soundIsOn and g_dedicatedServerInfo == nil then

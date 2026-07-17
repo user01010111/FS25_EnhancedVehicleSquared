@@ -360,6 +360,62 @@ case("parking_hydraulics_hud_trip", function(self)
   return true
 end)
 
+case("group_fold_contract", function()
+  if g_dedicatedServerInfo ~= nil then return skip("dedicated server") end
+  requireValue(Foldable ~= nil and type(Foldable.getToggledFoldDirection) == "function",
+    "loaded Foldable contract is unavailable")
+
+  local function controlledFoldable(turnOnDirection, foldAnimTime, moveDirection, allowed, warning)
+    local object = {
+      spec_foldable = {
+        hasFoldingParts = true,
+        foldingParts = { {} },
+        turnOnFoldDirection = turnOnDirection,
+        foldMoveDirection = moveDirection,
+        foldAnimTime = foldAnimTime,
+        moveToMiddle = false
+      },
+      guardCalls = {},
+      foldCalls = {}
+    }
+    object.getToggledFoldDirection = Foldable.getToggledFoldDirection
+    function object:getIsFoldAllowed(direction, onAiTurnOn)
+      table.insert(self.guardCalls, { direction = direction, onAiTurnOn = onAiTurnOn })
+      return allowed, warning
+    end
+    function object:setFoldState(direction, moveToMiddle)
+      table.insert(self.foldCalls, { direction = direction, moveToMiddle = moveToMiddle })
+    end
+    return object
+  end
+
+  local negative = controlledFoldable(-1, 1, 0, true)
+  local positive = controlledFoldable(1, 0, 0, true)
+  local blocked = controlledFoldable(-1, 0, 0, false, "EVTEST fold blocked")
+  FS25_EnhancedVehicle.foldHydraulicGroup({ negative, positive, blocked }, "integration")
+
+  requireValue(#negative.guardCalls == 1 and negative.guardCalls[1].direction == -1 and
+               negative.guardCalls[1].onAiTurnOn == false,
+    "negative fold guard did not receive the contract direction")
+  requireValue(#positive.guardCalls == 1 and positive.guardCalls[1].direction == 1,
+    "positive fold guard did not receive the contract direction")
+  requireValue(#negative.foldCalls == 1 and negative.foldCalls[1].direction == -1 and
+               negative.foldCalls[1].moveToMiddle == true,
+    "negative fold orientation produced the wrong state")
+  requireValue(#positive.foldCalls == 1 and positive.foldCalls[1].direction == 1 and
+               positive.foldCalls[1].moveToMiddle == true,
+    "positive fold orientation produced the wrong state")
+  requireValue(#blocked.guardCalls == 1 and #blocked.foldCalls == 0,
+    "blocked foldable mutated state")
+
+  negative.spec_foldable.foldMoveDirection = -1
+  FS25_EnhancedVehicle.foldHydraulicGroup({ negative }, "integration")
+  requireValue(#negative.foldCalls == 2 and negative.foldCalls[2].direction == 1 and
+               negative.foldCalls[2].moveToMiddle == false,
+    "repeated group fold did not reverse active movement")
+  return true
+end)
+
 local function graphicsCase(label, kind, value)
   case("aa_" .. label, function(self, dt, state)
     if g_dedicatedServerInfo ~= nil then return skip("dedicated server") end
